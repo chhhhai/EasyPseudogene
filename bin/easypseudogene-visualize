@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# EasyPseudogene Visualization Tool
+# Standalone command to generate visualization from existing results
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EASYPSEUDOGENE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+LIB_DIR="${EASYPSEUDOGENE_DIR}/lib"
+
+usage() {
+    cat <<EOF
+EasyPseudogene Visualization Tool
+
+Generate interactive HTML visualization from GeneWise results.
+
+Usage: easypseudogene-visualize [OPTIONS]
+
+Required:
+  --genewise FILE       GeneWise output file (pseudogene-genewise.txt)
+  --output FILE         Output HTML file
+
+Optional:
+  --pseudogene-list FILE  Filter to only these transcript IDs (one per line)
+  --species NAME        Species name (for auto-detecting paths)
+  --results-dir DIR     Results directory (auto-detects genewise file if --genewise not provided)
+
+Examples:
+  # Visualize all results for a specific file
+  easypseudogene-visualize \
+      --genewise output/dolphin/genewise/pseudogene-genewise.txt \
+      --output visualization.html
+  
+  # Auto-detect from results directory
+  easypseudogene-visualize \
+      --species dolphin \
+      --results-dir ./easypseudogene_output \
+      --output visualization.html
+
+EOF
+}
+
+GENEWISE_FILE=""
+OUTPUT_FILE=""
+PSEUDOGENE_LIST=""
+SPECIES=""
+RESULTS_DIR=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --genewise)
+            GENEWISE_FILE="$2"
+            shift 2
+            ;;
+        --output)
+            OUTPUT_FILE="$2"
+            shift 2
+            ;;
+        --pseudogene-list)
+            PSEUDOGENE_LIST="$2"
+            shift 2
+            ;;
+        --species)
+            SPECIES="$2"
+            shift 2
+            ;;
+        --results-dir)
+            RESULTS_DIR="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "ERROR: Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Auto-detect genewise file if not provided
+if [[ -z "${GENEWISE_FILE}" ]]; then
+    if [[ -n "${SPECIES}" && -n "${RESULTS_DIR}" ]]; then
+        GENEWISE_FILE="${RESULTS_DIR}/${SPECIES}/genewise/pseudogene-genewise.txt"
+        if [[ ! -f "${GENEWISE_FILE}" ]]; then
+            echo "ERROR: GeneWise file not found: ${GENEWISE_FILE}" >&2
+            exit 1
+        fi
+        echo "Auto-detected GeneWise file: ${GENEWISE_FILE}"
+        # Note: We purposely do not auto-detect a pseudogene list, so the visualizer uses all results
+    else
+        echo "ERROR: Either --genewise or both --species and --results-dir must be provided" >&2
+        usage
+        exit 1
+    fi
+fi
+
+# Check required arguments
+if [[ -z "${OUTPUT_FILE}" ]]; then
+    echo "ERROR: --output is required" >&2
+    usage
+    exit 1
+fi
+
+# Check if genewise file exists
+if [[ ! -f "${GENEWISE_FILE}" ]]; then
+    echo "ERROR: GeneWise file not found: ${GENEWISE_FILE}" >&2
+    exit 1
+fi
+
+# Check if visualization script exists
+if [[ ! -f "${LIB_DIR}/visualize_genewise.py" ]]; then
+    echo "ERROR: Visualization script not found: ${LIB_DIR}/visualize_genewise.py" >&2
+    exit 1
+fi
+
+# Build command
+CMD="python3 \"${LIB_DIR}/visualize_genewise.py\" --genewise \"${GENEWISE_FILE}\" --output \"${OUTPUT_FILE}\""
+
+if [[ -n "${PSEUDOGENE_LIST}" ]]; then
+    if [[ -f "${PSEUDOGENE_LIST}" ]]; then
+        CMD="${CMD} --pseudogene-list \"${PSEUDOGENE_LIST}\""
+    else
+        echo "WARNING: Pseudogene list file not found: ${PSEUDOGENE_LIST}, continuing without filter" >&2
+    fi
+fi
+
+echo "Generating visualization..."
+eval "${CMD}"
+
+echo ""
+echo "Visualization completed!"
+echo "  Output: ${OUTPUT_FILE}"
+echo "  Open in browser to view results"
