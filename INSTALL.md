@@ -6,7 +6,7 @@
    ```bash
    conda create -n easypseudogene python=3.9
    conda activate easypseudogene
-   conda install -c bioconda mmseqs2 miniprot samtools genewise
+   conda install -c bioconda mmseqs2 miniprot samtools wise2
    ```
 
 2. **Install EasyPseudogene**:
