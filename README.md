@@ -35,7 +35,7 @@ EasyPseudogene is an automated pipeline for identifying pseudogenes in target ge
    conda install -c bioconda samtools
    
    # GeneWise
-   conda install -c bioconda genewise
+   conda install -c bioconda wise2
    ```
 
 2. Install EasyPseudogene:
