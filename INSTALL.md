@@ -40,7 +40,7 @@ conda activate easypseudogene
 conda install -c bioconda mmseqs2
 conda install -c bioconda miniprot
 conda install -c bioconda samtools
-conda install -c bioconda genewise
+conda install -c bioconda wise2
 ```
 
 #### Option B: Manual Installation
