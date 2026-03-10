@@ -62,27 +62,7 @@ chmod +x scripts/*.sh
 chmod +x lib/*.py
 ```
 
-### Step 3: Configure GeneWise (if needed)
-
-If GeneWise is not in your PATH, you may need to set environment variables:
-
-```bash
-export WISECONFIGDIR=/path/to/wisecfg
-export PATH=$PATH:/path/to/genewise/bin
-```
-
-Or use command-line options:
-
-```bash
-easypseudogene \
-  --proteins proteins.fa \
-  --genome genome.fa \
-  --threads 96 \
-  --wiseconfig /path/to/wisecfg \
-  --wisepath /path/to/genewise/bin
-```
-
-### Step 4: Verify Installation
+### Step 3: Verify Installation
 
 ```bash
 # Check dependencies
@@ -92,7 +72,8 @@ easypseudogene --help
 easypseudogene \
   --proteins test_proteins.fa \
   --genome test_genome.fa \
-  --threads 4
+  --threads 4 \
+  --visualize
 ```
 
 ## System Requirements
