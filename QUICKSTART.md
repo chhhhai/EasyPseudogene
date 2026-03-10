@@ -20,7 +20,8 @@ export PATH=$PATH:$(pwd)/bin
 easypseudogene \
   --proteins reference.proteins.fa \
   --genome target.genome.fa \
-  --threads 96
+  --threads 96 \
+  --visualize
 ```
 
 ## Output
