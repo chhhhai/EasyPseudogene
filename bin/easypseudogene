@@ -48,8 +48,8 @@ Optional:
   --help                Show this help message
 
 Examples:
-  easypseudogene --proteins human.proteins.fa --genome dolphin.fa --threads 96
-  easypseudogene --proteins human.proteins.fa --genome dolphin.fa --threads 96 --whitelist ref_list.txt
+  easypseudogene --proteins human.proteins.fa --genome dolphin.fa --threads 96 --visualize
+  easypseudogene --proteins human.proteins.fa --genome dolphin.fa --threads 96 --whitelist ref_list.txt --visualize
 
 EOF
 }
