@@ -190,7 +190,7 @@ GLOBAL_MIN_ALN_LEN=250
 ### Example : Basic Run (Take the comparison between humans and cetaceans as an example)
 
 ```bash
-# abstract ensembl human longest pep
+# extract ensembl human longest pep
 wget https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz
 
 wget https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz
