@@ -58,7 +58,8 @@ EasyPseudogene is an automated pipeline for identifying pseudogenes in target ge
 easypseudogene \
   --proteins reference.proteins.fa \
   --genome target.genome.fa \
-  --threads 96
+  --threads 96 \
+  --visualize
 ```
 
 ### With Whitelist
@@ -68,7 +69,8 @@ easypseudogene \
   --proteins reference.proteins.fa \
   --genome target.genome.fa \
   --threads 96 \
-  --whitelist known_pseudogenes.txt
+  --whitelist known_pseudogenes.txt \
+  --visualize
 ```
 
 ### With Custom Configuration
@@ -102,7 +104,8 @@ easypseudogene \
   --output ./results \
   --wiseconfig /path/to/wisecfg \
   --wisepath /path/to/genewise/bin \
-  --whitelist ref_list.txt
+  --whitelist ref_list.txt \
+  --visualize
 ```
 
 ## Input Files
@@ -202,8 +205,6 @@ easypseudogene \
   --proteins human.longest_cds.proteins.fa \
   --genome dolphin.fa \
   --threads 96 \
-  --wiseconfig /public/software/wise2.4.1/wisecfg/ \
-  --wisepath /public/software/wise2.4.1/src/bin/ \
   --output result \
   --visualize
 ```
