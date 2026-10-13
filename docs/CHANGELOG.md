@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1-dev — 2026-10-13 (unreleased)
+
+- Merge English statistics, final-candidate alignments, QC and downloads into
+  one report.html; use a searchable candidate table with 20 rows per page.
+- Restore five GeneWise statistics and seven offline overview charts with
+  selectable all-completed-alignments and final-candidate scopes.
+- Correct codon-verified stop display and add a portable positive demo snapshot.
+- Incorporate development revisions 3.0.12-dev through 3.0.16-dev. Recorded
+  validation remains version-specific; no new regression suite was run for
+  this publication step.
+
+
 ## 1.1.0 — 2026-10-13
 
 - Publish the maintained development source as the public v1.1.0 release;
@@ -13,6 +25,70 @@
 - Remove the whitelist interface; use a fresh output directory when upgrading.
 - Historical 3.x entries below record development provenance, rather than
   public GitHub release numbering. See docs/VALIDATION.md for validation scope.
+
+
+## 3.0.16-dev — 2026-10-13 (unreleased)
+
+- Restore five GeneWise overview statistics and seven charts in the unified
+  report: score, identity and length distributions, disruption event totals,
+  mutation counts per alignment, and the two identity scatter plots.
+- Let users switch between all completed selected GeneWise alignments and
+  final candidate alignments. Label alignment counts independently of final
+  candidate counts; table pagination/search do not affect chart statistics.
+- Embed compact measurements and offline SVG charts without a CDN dependency.
+  Exclude missing measurements, report score availability, and disclose scatter
+  downsampling above 2,000 points. Preserve the 20-row candidate table.
+- Restore the overview using existing checked demo measurements. No new
+  alignment analysis or regression suite was run for this presentation change.
+
+## 3.0.15-dev — 2026-10-13 (unreleased)
+
+- Replace the final-candidate card list with a compact table of IDs, location,
+  evidence grade, stops, frameshifts, query coverage and identity.
+- Show 20 candidates per page. Search all candidates and reset to page one
+  when the search changes; show matching counts and an explicit empty state.
+- Expand alignment evidence below the selected row, with all details initially
+  collapsed. Keep full TSV/BED/GFF3 exports independent of pagination.
+- Regenerate the example report from existing checked demo data. Generate a
+  separately labelled 100-row layout illustration, not an analysis result.
+  No new alignment analysis or regression suite was run for this UI revision.
+
+## 3.0.14-dev — 2026-10-13 (unreleased)
+
+- Merge statistics, searchable final-candidate details, highlighted GeneWise
+  alignments, filtering diagnostics and downloads into a single offline report.
+- Match alignments by final locus ID so rejected copies of the same protein
+  cannot enter the final-candidate display. Show missing evidence explicitly.
+- Stop generating a second viewer in the standard workflow and bundled demo;
+  retain --visualize as a compatibility option and the standalone viewer tool.
+- Regenerate the portable preview from previously checked 3.0.13-dev demo
+  results. No new alignment analysis or regression suite was run for this
+  presentation revision.
+
+## 3.0.13-dev — 2026-10-13 (unreleased)
+
+- Add a final-only positive Demo viewer and a generated, portable result
+  snapshot with one detected synthetic candidate and its TSV/BED/GFF3 outputs.
+- Use the codon-aware analysis parser in the GeneWise viewer so verified X
+  stops, frameshifts and identity agree with the result tables. Highlight
+  verified stops and retain ambiguous codons as unassessed residues.
+- Label generic viewer records as alignments, escape user-supplied text and
+  keep tables/alignment details usable when the Chart.js CDN is unavailable.
+- Pass 104 regression tests and a fresh synthetic Cross/Self demo using two
+  threads. Candidate filtering rules remain unchanged.
+
+## 3.0.12-dev — 2026-10-13 (unreleased)
+
+- Make the shared report.html interface English for both comparison modes and
+  standard/catalog workflows: headings, counters, evidence descriptions,
+  candidate preview, download labels, QC notes and empty-table messages.
+- Keep candidate calculations, filtering thresholds, result schemas and
+  original input IDs unchanged. Existing completed reports retain their
+  original language unless separately regenerated.
+- Record syntax checks and report rendering from copied 3.0.11-dev demo
+  results. No new regression suite or alignment analysis was run for this
+  presentation change.
+
 
 ## 3.0.11-dev — 2026-10-13 (unreleased)
 

@@ -1,8 +1,8 @@
 # Advanced usage
 
 The two comparison modes remain Cross and Self. This document covers optional
-execution choices and evidence annotation for the interface in
-1.1.0. Run `easypseudogene --help-advanced` for the complete option list.
+execution choices and evidence annotation for the development interface in
+1.1.1-dev. Run `easypseudogene --help-advanced` for the complete option list.
 
 ## Configuration
 

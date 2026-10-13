@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -61,8 +62,6 @@ def check(output):
         if mode == 'cross':
             require(int(final[0]['stop_count']) >= 1 and int(final[0]['frameshift_count']) >= 1,
                     'cross: engineered stop/frameshift was not recovered')
-            require((run / 'results/genewise_alignment.html').is_file(),
-                    'cross: alignment viewer was not generated')
             intact = [r for r in rows(run / 'results/loci.tsv') if r['query_id'] == 'demo_B.t1']
             require(len(intact) == 1 and intact[0]['decision_reason'] == 'no_genewise_disruption',
                     'cross: intact negative control did not pass its expected check')
@@ -100,6 +99,23 @@ def check(output):
         checked[mode] = dict(final_loci=len(final), report=str(run / 'report.html'))
     result = dict(status='passed', scope='Synthetic installation check; not a biological accuracy benchmark',
                   runs=checked)
+    viewer = output / 'cross/report.html'
+    require(viewer.is_file(), 'Merged candidate report is missing')
+    match = re.search(r'<script id="final-alignment-data" type="application/json">(.*?)</script>', viewer.read_text(), re.S)
+    require(match is not None, 'Merged report has no alignment data')
+    data_rows = json.loads(match.group(1))
+    require(len(data_rows) == 1 and data_rows[0]['transcript_id'] == 'demo_A.t1',
+            'Final viewer must contain only the final demo_A.t1 candidate')
+    final_row = rows(output / 'cross/results/final_loci.tsv')[0]
+    record = data_rows[0]
+    require(record['stop_count'] == int(final_row['stop_count'])
+            and record['frameshift_count'] == int(final_row['frameshift_count']),
+            'Viewer and TSV disruption counts disagree')
+    require(abs(record['identity'] / 100 - float(final_row['alignment_identity'])) < 0.0001,
+            'Viewer and TSV identity disagree')
+    require({m['type'] for m in record['mutations']} == {'stop', 'frameshift'},
+            'Final viewer must highlight both engineered events')
+    result['merged_report'] = str(viewer)
     (output / 'demo_check.json').write_text(json.dumps(result, indent=2) + '\n')
     return result
 

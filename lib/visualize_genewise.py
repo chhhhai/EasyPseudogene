@@ -13,6 +13,8 @@ import argparse
 import re
 import sys
 from html import escape
+from alignment_metrics import aligned_query_length, sequence_identity
+from genewise_alignment import mutation_counts, segments
 
 
 def parse_genewise_block(block):
@@ -39,17 +41,17 @@ def parse_genewise_block(block):
         result['score'] = float(score_match.group(1))
     
     # Count mutations
-    result['stop_count'] = len(re.findall(r'\*', block))
-    stopx_count = len(re.findall(r':X\[', block))
-    if result['stop_count'] == 0 and stopx_count > 0:
-        result['stop_count'] = stopx_count
-    result['frameshift_count'] = len(re.findall(r'!', block))
+    result['stop_count'], result['frameshift_count'] = mutation_counts(block)
     
     # Extract alignment sequences
     lines = block.split('\n')
     qid_short = result['transcript_id'].split('.')[0] if result['transcript_id'] else None
     
-    if qid_short:
+    pretty = list(segments(block))
+    if pretty:
+        result['query_seq'] = ''.join(query for query, _ in pretty)
+        result['target_seq'] = ''.join(target for _, target in pretty)
+    elif qid_short:
         qseq_parts = []
         tseq_parts = []
         in_alignment = False
@@ -81,15 +83,18 @@ def parse_genewise_block(block):
     
     # Calculate identity if sequences are present
     if result['query_seq'] and result['target_seq']:
-        matches = sum(1 for a, b in zip(result['query_seq'], result['target_seq']) if a == b)
-        length = len(result['query_seq'])
-        result['identity'] = (matches / length * 100) if length > 0 else 0
-        result['length'] = length
+        result['identity'] = sequence_identity(result['query_seq'], result['target_seq']) * 100
+        result['length'] = aligned_query_length(result['query_seq'], result['target_seq'])
     else:
         result['identity'] = 0
         result['length'] = 0
     
-    # Find mutation positions
+    # Shared parser marks only codon-verified stops as X. Use * for display;
+    # ambiguous/sense codons remain ? and are not highlighted as stops.
+    if pretty:
+        result['target_seq'] = result['target_seq'].replace('X', '*')
+
+    # Positions refer to alignment columns, including gaps/intron columns.
     if result['query_seq'] and result['target_seq']:
         # Find stop codons (*)
         for i, char in enumerate(result['target_seq']):
@@ -99,7 +104,7 @@ def parse_genewise_block(block):
                     'position': pos,
                     'type': 'stop',
                     'char': '*',
-                    'description': f'Stop codon at position {pos}'
+                    'description': f'Stop codon at alignment column {pos}'
                 })
         
         # Find frameshifts (!)
@@ -110,11 +115,11 @@ def parse_genewise_block(block):
                     'position': pos,
                     'type': 'frameshift',
                     'char': '!',
-                    'description': f'Frameshift at position {pos}'
+                    'description': f'Frameshift at alignment column {pos}'
                 })
         
         # Find :X[ pattern (stop at splice site) - approximate position
-        if ':X[' in block:
+        if not pretty and ':X[' in block:
             # Try to find approximate position in alignment
             result['mutations'].append({
                 'position': None,
@@ -211,7 +216,8 @@ def format_alignment_html(query_seq, target_seq, mutations, max_width=80):
     return ''.join(html_parts)
 
 
-def generate_html_report(results, output_file):
+def generate_html_report(results, output_file, title='GeneWise Alignment Viewer',
+                         subtitle='Alignment and disruption evidence; see final_loci.tsv for final candidate decisions.'):
     """Generate HTML visualization report."""
     import json
     
@@ -252,12 +258,15 @@ def generate_html_report(results, output_file):
             'mutations': r['mutations']
         })
     
+    def script_json(value):
+        return json.dumps(value).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeneWise Pseudogene Visualization</title>
+    <title>{escape(title)}</title>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -510,12 +519,13 @@ def generate_html_report(results, output_file):
 </head>
 <body>
     <div class="container">
-        <h1>🧬 GeneWise Pseudogene Identification Results</h1>
+        <h1>🧬 {escape(title)}</h1>
+        <p>{escape(subtitle)}</p>
         
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>{total}</h3>
-                <p>Total Pseudogenes</p>
+                <p>Alignment Records</p>
             </div>
             <div class="stat-card">
                 <h3>{with_stops}</h3>
@@ -589,9 +599,15 @@ def generate_html_report(results, output_file):
     
     <script>
         // Data passed from Python
-        const chartData = {json.dumps(chart_data)};
+        const chartData = {script_json(chart_data)};
         // Full Dataset
-        const allPseudogenes = {json.dumps(json_results)};
+        const allPseudogenes = {script_json(json_results)};
+
+        function escapeHtml(value) {{
+            return String(value).replace(/[&<>"']/g, character => ({{
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }})[character]);
+        }}
         
         // --- State ---
         let currentPage = 1;
@@ -639,7 +655,7 @@ def generate_html_report(results, output_file):
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><button class="btn-expand" onclick="toggleDetails(${{realIndex}})">+</button></td>
-                    <td style="font-family: monospace; font-weight: bold;">${{item.transcript_id}}</td>
+                    <td style="font-family: monospace; font-weight: bold;">${{escapeHtml(item.transcript_id)}}</td>
                     <td><span class="badge badge-score">${{item.score ? item.score.toFixed(1) : 'N/A'}}</span></td>
                     <td><span class="badge badge-identity">${{item.identity.toFixed(1)}}%</span></td>
                     <td>
@@ -695,7 +711,7 @@ def generate_html_report(results, output_file):
             if (item.mutations && item.mutations.length > 0) {{
                 html += '<div class="mutations-list"><strong>Mutations:</strong><ul>';
                 item.mutations.forEach(mut => {{
-                     html += `<li>${{mut.description}}</li>`;
+                     html += `<li>${{escapeHtml(mut.description)}}</li>`;
                 }});
                 html += '</ul></div>';
             }}
@@ -720,7 +736,7 @@ def generate_html_report(results, output_file):
                 
                 // Query Line
                 html += '<div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">';
-                html += qChunk.split('').map(c => `<span>${{c}}</span>`).join('');
+                html += qChunk.split('').map(c => `<span>${{escapeHtml(c)}}</span>`).join('');
                 html += '</span></div>';
 
                 // Target Line
@@ -731,9 +747,9 @@ def generate_html_report(results, output_file):
                     const mut = mutMap[pos];
                     if (mut) {{
                         const className = mut.type === 'stop' ? 'stop' : (mut.type === 'frameshift' ? 'frameshift' : '');
-                        html += `<span class="mutation ${{className}}" title="${{mut.description}}">${{char}}</span>`;
+                        html += `<span class="mutation ${{className}}" title="${{escapeHtml(mut.description)}}">${{escapeHtml(char)}}</span>`;
                     }} else {{
-                        html += `<span>${{char}}</span>`;
+                        html += `<span>${{escapeHtml(char)}}</span>`;
                     }}
                 }});
                 
@@ -774,6 +790,11 @@ def generate_html_report(results, output_file):
         
         // --- Chart Renderers ---
         function renderCharts() {{
+            if (typeof Chart === 'undefined') {{
+                document.querySelector('.charts-container').innerHTML =
+                    '<p>Charts need Chart.js from the CDN. The candidate table and alignment details remain available offline.</p>';
+                return;
+            }}
             // 1. Score Distribution
             const scoreHist = createHistogram(chartData.scores, 10);
             new Chart(document.getElementById('scoreChart'), {{
@@ -791,7 +812,7 @@ def generate_html_report(results, output_file):
                 options: {{
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {{ title: {{ display: true, text: 'Pseudogene Score Distribution' }} }}
+                    plugins: {{ title: {{ display: true, text: 'Alignment Score Distribution' }} }}
                 }}
             }});
             
@@ -847,10 +868,10 @@ def generate_html_report(results, output_file):
                 options: {{
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {{ title: {{ display: true, text: 'Mutation Counts per Pseudogene' }} }},
+                    plugins: {{ title: {{ display: true, text: 'Mutation Counts per Alignment' }} }},
                     scales: {{
                         x: {{ title: {{ display: true, text: 'Number of Mutations' }} }},
-                        y: {{ title: {{ display: true, text: 'Count of Pseudogenes' }} }}
+                        y: {{ title: {{ display: true, text: 'Alignment Records' }} }}
                     }}
                 }}
             }});
@@ -995,24 +1016,27 @@ Examples:
                      help='Output HTML file')
     ap.add_argument('--pseudogene-list',
                      help='Optional: Filter to only these transcript IDs (one per line)')
+    ap.add_argument('--title', default='GeneWise Alignment Viewer', help='Report title')
+    ap.add_argument('--subtitle', default='Alignment and disruption evidence; see final_loci.tsv for final candidate decisions.',
+                    help='Report scope description')
     
     args = ap.parse_args()
     
     print("Parsing GeneWise output...", file=sys.stderr)
     results = parse_genewise_file(args.genewise)
-    print(f"Found {len(results)} pseudogene results", file=sys.stderr)
+    print(f"Found {len(results)} alignment records", file=sys.stderr)
     
     if args.pseudogene_list:
         print("Filtering by pseudogene list...", file=sys.stderr)
         results = filter_by_list(results, args.pseudogene_list)
-        print(f"After filtering: {len(results)} pseudogenes", file=sys.stderr)
+        print(f"After filtering: {len(results)} alignment records", file=sys.stderr)
     
     if not results:
         print("WARNING: No results to visualize", file=sys.stderr)
         sys.exit(1)
     
     print("Generating HTML report...", file=sys.stderr)
-    generate_html_report(results, args.output)
+    generate_html_report(results, args.output, title=args.title, subtitle=args.subtitle)
     print("Done!", file=sys.stderr)
 
 

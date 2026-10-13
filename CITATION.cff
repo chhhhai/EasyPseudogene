@@ -2,8 +2,7 @@ cff-version: 1.2.0
 message: "Please cite the EasyPseudogene version used and the underlying tools listed in the README."
 title: "EasyPseudogene: pseudogene candidate discovery in Cross and Self modes"
 type: software
-version: 1.1.0
-date-released: 2026-10-13
+version: 1.1.1-dev
 authors:
   - name: "EasyPseudogene Development Team"
 license: MIT

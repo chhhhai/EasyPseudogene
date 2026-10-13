@@ -42,15 +42,15 @@ differ. The catalog calls are computational candidates requiring review.
 - The reported candidates lack a curated independent truth set, completed
   manual clearance and experimental validation.
 
-## Current documentation/interface revision
+## Recorded documentation/interface revision
 
-**1.1.0** (prepared from the **3.0.11-dev** development revision) rewrites the documentation and removes the whitelist interface
+**1.1.0** was published from **3.0.11-dev**, which rewrites the documentation and removes the whitelist interface
 and tracking helpers. It also expands GeneWise executable/configuration discovery
 and validates required configuration files before analysis. Candidate filtering
 rules are unchanged. Static syntax and documentation checks are recorded for
 this revision.
 
-On 2026-10-13, the current checkout passed **98 regression tests**, including
+On 2026-10-13, the 3.0.11-dev checkout passed **98 regression tests**, including
 five checks for demo reproducibility and failure handling. The bundled
 [synthetic installation demo](../examples/demo/README.md) also completed with
 two threads in the existing Conda environment, without explicit `--wisepath` or
@@ -68,11 +68,29 @@ two threads in the existing Conda environment, without explicit `--wisepath` or
 These synthetic checks validate installation and execution. No new full BRAKER
 discovery or biological accuracy benchmark was performed for this revision.
 
-The GitHub upload copy preserves the runtime code, tests and bundled demo data
-from that checked checkout. Packaging checks compare file hashes, parse source
-syntax and resolve documentation links. Tests and the demo were not rerun from
-the upload copy, and its minimal environment specification was not freshly
-installed as part of packaging.
+## English report revision
+
+**3.0.12-dev** translates the shared HTML report interface into English. Source
+syntax and rendered reports from copied 3.0.11-dev demo results were checked.
+The previously completed analyses and their cached reports were preserved.
+No new regression suite, GeneWise analysis or biological benchmark was run for
+this presentation change. Report previews retain the original analysis version.
+
+## Positive demo and viewer revision
+
+On 2026-10-13, **3.0.13-dev** passed **104 regression tests** and a new two-thread
+synthetic Cross/Self demo. One recorded combined run took 7 seconds. Cross
+produced one final `demo_A.t1` candidate with one verified stop, one frameshift,
+100% query coverage and approximately 99.33% amino-acid identity. Self remained
+the expected zero-final-candidate control.
+
+The viewer now shares the analysis parser for codon-verified stops and alignment
+metrics. In particular, a GeneWise `X` is a stop only when its displayed DNA
+codon is TAA, TAG or TGA. The final-only Demo viewer agrees with the TSV counts
+and identity and highlights both engineered events. A generated compact
+[result snapshot](../examples/demo/expected/README.md) is bundled for viewing.
+These are synthetic computational candidates; no biological accuracy value or
+new full BRAKER benchmark is claimed.
 
 Version-specific records from the local project are preserved outside the
 software checkout under `software_repair_20261012/output_layout_runtime_validation/`.
@@ -96,3 +114,12 @@ For a reproducible precision/recall result, record:
 Any learned scoring evaluation should separate related gene families and
 hold out species. Recovering a literature gene ID is not equivalent to
 recovering the same candidate locus or reproducing all manual filtering stages.
+
+## Current public development revision
+
+**1.1.1-dev** incorporates the English report, positive demo and unified-report
+changes recorded under **3.0.12-dev** through **3.0.16-dev**. The 104-test and
+Cross/Self execution results above apply to **3.0.13-dev**. The later report
+revisions were rendered from those existing checked results, with syntax
+checks, without a new regression suite or biological analysis. Publication
+itself does not establish additional validation.

@@ -1,0 +1,22 @@
+{
+  "compute_budget_excluded_queries": 0,
+  "decision_reasons": {
+    "no_genewise_disruption": 1,
+    "passed_all_enabled_filters": 1
+  },
+  "evidence_levels": {
+    "high": 1,
+    "low": 1
+  },
+  "final_loci": 1,
+  "final_queries": 1,
+  "frameshift_events": 1,
+  "genewise_frameshift_events": 1,
+  "genewise_stop_events": 1,
+  "input_excluded_records": 0,
+  "input_queries": 2,
+  "input_total_records": 2,
+  "selected_loci": 2,
+  "stop_events": 1,
+  "workflow": "standard"
+}

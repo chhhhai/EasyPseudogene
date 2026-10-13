@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EasyPseudogene — synthetic_demo</title>
+<style>body{margin:0;background:#f5f7fa;color:#182333;font:15px/1.65 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:28px 20px}h1,h2{line-height:1.3}.subtitle{color:#506176}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.card,section{background:white;border:1px solid #dae1e9;border-radius:10px;padding:18px;margin-bottom:18px}.card span{display:block;color:#506176}.card strong{font-size:30px}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e3e8ef;white-space:nowrap}th{background:#f5f7fa}a{color:#195aa3}ul{padding-left:22px}.note{border-left:4px solid #6290b6;padding-left:14px}footer{color:#506176}
+header{margin-bottom:25px}h1{font-size:32px;margin:8px 0}h2{font-size:22px}.eyebrow{color:#14766b;letter-spacing:2px;font-size:11px;font-weight:700}.scope-note{font-size:13px;color:#986316;background:#fff4da;padding:8px 12px;border-radius:6px}nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:20px}nav a{text-decoration:none;font-weight:600}.cards{margin-bottom:20px}.card{margin-bottom:0;box-shadow:0 3px 10px #18233304}.card:nth-child(5){background:#0f6e65;color:white;border-color:#0f6e65}.card:nth-child(5) span{color:#d0f1e9}.count-pill,.grade{display:inline-block;border-radius:20px;background:#e0f3ec;color:#125d4d;padding:2px 10px;font-size:13px;vertical-align:middle}.count-pill{margin-left:8px}.candidate-table{font-size:13px}.candidate-table th{position:sticky;top:0}.candidate-row:hover{background:#f6faf9}.candidate-toggle{border:0;background:transparent;color:#195aa3;padding:4px 0;font:inherit;font-weight:600;cursor:pointer;text-align:left}.candidate-toggle::before{content:'▸';display:inline-block;width:18px}.candidate-toggle[aria-expanded=true]::before{content:'▾'}.candidate-detail>td{white-space:normal;background:#f8fafc;padding:0}.candidate-body{padding:16px 20px}.candidate-body h3{margin-top:0}.pagination{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}.pagination button{border:1px solid #cad6e0;border-radius:6px;background:white;padding:8px 14px;color:#195aa3;font:inherit;cursor:pointer}.pagination button:disabled{color:#7e8995;background:#f5f7fa;cursor:default}.pagination span{font-size:13px;color:#506176}button:focus-visible{outline:2px solid #14766b;outline-offset:3px}.evidence-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.evidence-metrics>div{background:#f5f7fa;border-radius:6px;padding:10px 14px}.evidence-metrics span{display:block;font-size:12px;color:#506176}.evidence-metrics strong{font-size:22px}.decision{font-size:12px;color:#506176}.alignment{overflow:auto;background:#f8fafc;border:1px solid #e1e7ed;border-radius:6px;padding:16px;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.alignment-block{margin-bottom:12px}.seq-line{white-space:pre}.seq-label{display:inline-block;width:65px;color:#68788b}.mutation{font-weight:bold;border-radius:3px}.stop,.stop-key{background:#ffe0e5;color:#b41938}.frameshift,.frame-key{background:#ffe7c2;color:#945000}.legend{font-size:12px;color:#506176}.legend b{padding:3px 7px;border-radius:4px}.search-label{display:block;font-size:12px;font-weight:600;color:#506176;margin-bottom:5px}input[type=search]{box-sizing:border-box;width:100%;max-width:420px;padding:10px 12px;font:inherit;border:1px solid #cad6e0;border-radius:6px}#search-status{font-size:12px;color:#506176}.diagnostics{border-top:1px solid #e3e8ef;padding:12px 0}.diagnostics summary{cursor:pointer;font-weight:600}.diagnostics .table-wrap{margin-top:14px}.downloads{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px 20px}.empty-state{color:#506176;background:#f5f7fa;border-radius:6px;padding:16px}html{scroll-behavior:smooth}summary:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #14766b;outline-offset:3px}
+.overview-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:20px 0}.overview-stats>div{background:#f2f6fa;border-radius:8px;padding:14px}.overview-stats span{display:block;font-size:12px;color:#506176}.overview-stats strong{display:block;font-size:26px}.overview-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr));gap:18px}.overview-chart{min-width:0;border:1px solid #dae1e9;border-radius:8px;padding:12px}.overview-chart h3{font-size:14px;margin:0 0 10px}.overview-chart svg{width:100%;height:auto;display:block}.chart-caption{font-size:12px;color:#506176;margin:8px 0 0}#overview-scope{font:inherit;border:1px solid #cad6e0;border-radius:6px;padding:7px;max-width:100%;background:white;color:#182333}#overview-scope-note{font-size:13px;color:#506176}
+</style></head>
+<body><main><header><p class="eyebrow">EASYPSEUDOGENE / ANALYSIS RESULTS</p><h1>EasyPseudogene Analysis Report</h1>
+<p class="subtitle">synthetic_demo · Cross · GeneWise workflow · Analysis version: 3.0.13-dev</p>
+<p class="scope-note">Synthetic installation demo · This example does not measure biological accuracy.</p><nav><a href="#overview">Overview charts</a><a href="#candidates">Final candidates</a><a href="#diagnostics">Filtering &amp; QC</a><a href="#downloads">Download results</a></nav></header>
+<div class="cards"><div class="card"><span>Input protein records</span><strong>2</strong></div><div class="card"><span>Accepted query proteins</span><strong>2</strong></div><div class="card"><span>Excluded input records</span><strong>0</strong></div><div class="card"><span>Selected loci</span><strong>2</strong></div><div class="card"><span>Final candidate loci</span><strong>1</strong></div><div class="card"><span>Final candidate queries</span><strong>1</strong></div></div>
+<section id="overview"><h2>GeneWise overview</h2>
+<label for="overview-scope">Statistics scope</label> <select id="overview-scope"><option value="all">All completed GeneWise alignments</option><option value="final">Final candidate alignments</option></select>
+<p id="overview-scope-note" aria-live="polite">All completed alignments include loci excluded by downstream filters. They are not the final pseudogene count. Candidate-table search and pagination do not change these statistics.</p>
+<div class="overview-stats"><div><span>Alignment records</span><strong id="overview-stat-alignments">—</strong></div><div><span>With stop codons</span><strong id="overview-stat-stops">—</strong></div><div><span>With frameshifts</span><strong id="overview-stat-frameshifts">—</strong></div><div><span>With both mutations</span><strong id="overview-stat-both">—</strong></div><div><span>Average score (bits)</span><strong id="overview-stat-score">—</strong></div></div><div class="overview-charts"><div class="overview-chart"><h3>GeneWise score distribution</h3><svg id="overview-score" viewBox="0 0 400 270" role="img" aria-label="GeneWise score distribution"></svg><p class="chart-caption" id="overview-score-caption"></p></div><div class="overview-chart"><h3>Disruption events</h3><svg id="overview-events" viewBox="0 0 400 270" role="img" aria-label="Disruption events"></svg><p class="chart-caption" id="overview-events-caption"></p></div><div class="overview-chart"><h3>Mutation counts per alignment</h3><svg id="overview-mutations" viewBox="0 0 400 270" role="img" aria-label="Mutation counts per alignment"></svg><p class="chart-caption" id="overview-mutations-caption"></p></div><div class="overview-chart"><h3>Sequence identity distribution</h3><svg id="overview-identity" viewBox="0 0 400 270" role="img" aria-label="Sequence identity distribution"></svg><p class="chart-caption" id="overview-identity-caption"></p></div><div class="overview-chart"><h3>Identity versus score</h3><svg id="overview-identity-score" viewBox="0 0 400 270" role="img" aria-label="Identity versus score"></svg><p class="chart-caption" id="overview-identity-score-caption"></p></div><div class="overview-chart"><h3>Length versus identity</h3><svg id="overview-length-identity" viewBox="0 0 400 270" role="img" aria-label="Length versus identity"></svg><p class="chart-caption" id="overview-length-identity-caption"></p></div><div class="overview-chart"><h3>Alignment length distribution</h3><svg id="overview-length" viewBox="0 0 400 270" role="img" aria-label="Alignment length distribution"></svg><p class="chart-caption" id="overview-length-caption"></p></div></div>
+<noscript><p>Enable JavaScript to display charts. Measurements remain available in the result tables.</p></noscript></section>
+<section id="candidates"><h2>Final candidates <span class="count-pill">1</span></h2><p>Click a candidate ID to expand its alignment and disruption evidence. Showing 20 candidates per page; search covers all candidates. Only loci in final_loci.tsv appear here. Coordinates are 0-based, half-open.</p><label class="search-label" for="candidate-search">Find a candidate</label><input id="candidate-search" type="search" placeholder="Locus, protein, contig or evidence level">
+<p id="search-status" aria-live="polite">Showing 1–1 of 1 candidates · Page 1 of 1</p>
+<div class="table-wrap"><table class="candidate-table"><thead><tr><th scope="col">Candidate locus</th><th scope="col">Reference protein</th><th scope="col">Location</th><th scope="col">Evidence</th><th scope="col">Stops</th><th scope="col">Frameshifts</th><th scope="col">Coverage</th><th scope="col">Identity</th></tr></thead><tbody><tr class="candidate-row" data-search="demo_a.t1 demo_a.t1 cross_disrupted_a high"><td><button type="button" class="candidate-toggle" aria-expanded="false" aria-controls="candidate-detail-0" aria-label="Show alignment and evidence for demo_A.t1">demo_A.t1</button></td><td>demo_A.t1</td><td>cross_disrupted_A:600–1499 (+)</td><td><span class="grade">high</span></td><td>1</td><td>1</td><td>100.00%</td><td>99.33%</td></tr>
+<tr class="candidate-detail" id="candidate-detail-0" hidden><td colspan="8"><div class="candidate-body"><h3>demo_A.t1</h3><p>Reference protein: <strong>demo_A.t1</strong> · Evidence method: GeneWise</p><div class="evidence-metrics"><div><span>Stop codons</span><strong>1</strong></div><div><span>Frameshifts</span><strong>1</strong></div><div><span>Query coverage</span><strong>100.00%</strong></div><div><span>Alignment identity</span><strong>99.33%</strong></div></div><p class="decision">Filter decision: passed_all_enabled_filters</p><h3>GeneWise amino-acid alignment</h3><p class="legend"><b class="stop-key">* Stop codon</b> <b class="frame-key">! Frameshift</b> · Positions refer to alignment columns.</p><div class="alignment"><div class="alignment-block"><div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILAFQIEYCRDSVRFTAQAQHNHICSDLCHLFTR</span></div><div class="seq-line"><span class="seq-label">Target:</span> <span class="seq-target">MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILAFQIEYCRDSVRFTAQAQHNHICSDLCHLFTR</span></div></div><div class="alignment-block"><div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">FVNPFDVVYARHWRDVWPERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDKRPNVRGINNYFMMQAWYMYHD</span></div><div class="seq-line"><span class="seq-label">Target:</span> <span class="seq-target">FVNPFDVVYARHWRDVWPERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDK<span class="mutation stop" title="Stop codon at alignment column 140">*</span>PNVRGINNYFMMQAWYMYHD</span></div></div><div class="alignment-block"><div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">PTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMKGNIGTERVKALAQNCIDRLGTSSLDDDCVYYECCARWELRNMFV</span></div><div class="seq-line"><span class="seq-label">Target:</span> <span class="seq-target">PTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMKGNIGTERVKALAQNCIDR<span class="mutation frameshift" title="Frameshift at alignment column 215">!</span>GTSSLDDDCVYYECCARWELRNMFV</span></div></div><div class="alignment-block"><div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">MSNRDPGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSRCCMACS</span></div><div class="seq-line"><span class="seq-label">Target:</span> <span class="seq-target">MSNRDPGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSRCCMACS</span></div></div></div><h3>Disruption events</h3><div class="table-wrap"><table><thead><tr><th>Event</th><th>Alignment column</th><th>Description</th></tr></thead><tbody><tr><td>stop</td><td>140</td><td>Stop codon at alignment column 140</td></tr><tr><td>frameshift</td><td>215</td><td>Frameshift at alignment column 215</td></tr></tbody></table></div></div></td></tr><tr id="no-candidate-matches" hidden><td colspan="8">No candidates match your search.</td></tr></tbody></table></div>
+<nav class="pagination" aria-label="Candidate pages"><button id="candidate-prev" type="button" disabled>Previous</button><span id="candidate-page">Page 1 of 1</span><button id="candidate-next" type="button" disabled>Next</button><span>20 candidates per page</span></nav>
+<noscript><p>Enable JavaScript to search, change pages and expand alignments. Complete records are available in the downloadable result tables.</p></noscript></section>
+<section id="diagnostics"><h2>Filtering and quality control</h2><details class="diagnostics"><summary>Filtering stage counts</summary><div class="table-wrap"><table><thead><tr><th>Stage</th><th>Loci / inputs</th><th>Query proteins</th></tr></thead><tbody><tr><td>input</td><td>2</td><td>2</td></tr><tr><td>selected_alignment</td><td>2</td><td>2</td></tr><tr><td>genewise_completed</td><td>2</td><td>2</td></tr><tr><td>genewise_disruption</td><td>1</td><td>1</td></tr><tr><td>putative</td><td>1</td><td>1</td></tr><tr><td>family_copy_pass</td><td>1</td><td>1</td></tr><tr><td>final_candidate</td><td>1</td><td>1</td></tr></tbody></table></div></details><details class="diagnostics"><summary>Evidence level distribution</summary><div class="table-wrap"><table><thead><tr><th>Evidence level</th><th>All selected loci</th><th>Final candidates</th><th>Rule</th></tr></thead><tbody><tr><td>high</td><td>1</td><td>1</td><td>Stop/frameshift; query coverage ≥0.8 and identity ≥0.5</td></tr><tr><td>medium</td><td>0</td><td>0</td><td>Stop/frameshift; query coverage ≥0.2 and identity ≥0.3</td></tr><tr><td>low</td><td>1</td><td>0</td><td>Assessed, with no disruption or below the evidence thresholds</td></tr><tr><td>unassessed</td><td>0</td><td>0</td><td>Structural validation or required measurements are missing</td></tr></tbody></table></div></details><details class="diagnostics"><summary>Result interpretation and input QC</summary><p>Final candidates passed the standard GeneWise workflow, including the enabled family, copy and alignment-quality filters.</p><p class="note">These computational candidates require biological review. High/medium/low grades describe sequence-disruption evidence, not the probability that a locus is a true pseudogene. Evidence grades and filtering decisions are recorded separately. GeneWise identity is amino-acid identity; miniprot identity is the PAF match proportion. These measurements are not directly equivalent. See evidence_status.tsv for assessed and unassessed evidence.</p><p>Input QC status: passed</p></details></section>
+<section id="downloads"><h2>Results and quality-control files</h2><ul class="downloads"><li><a href="results/final_loci.tsv">Final candidates (TSV)</a></li><li><a href="results/final_loci.bed">Final candidates (BED)</a></li><li><a href="results/final_loci.gff3">Final candidates (GFF3)</a></li><li><a href="results/final_queries.txt">Candidate query protein IDs</a></li><li><a href="results/loci.tsv">All selected loci and filtering decisions</a></li><li><a href="results/queries.tsv">All accepted query proteins</a></li><li><a href="results/summary.json">Summary statistics (JSON)</a></li><li><a href="qc/input_qc.json">Input quality control</a></li><li><a href="metadata/run_manifest.json">Run metadata</a></li></ul></section>
+<footer>This report opens offline, including alignments and search. TSV/BED coordinates are 0-based, half-open; GFF3 coordinates are 1-based, inclusive.</footer></main>
+<script id="final-alignment-data" type="application/json">[{"transcript_id": "demo_A.t1", "query_seq": "MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILAFQIEYCRDSVRFTAQAQHNHICSDLCHLFTRFVNPFDVVYARHWRDVWPERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDKRPNVRGINNYFMMQAWYMYHDPTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMKGNIGTERVKALAQNCIDRLGTSSLDDDCVYYECCARWELRNMFVMSNRDPGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSRCCMACS", "target_seq": "MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILAFQIEYCRDSVRFTAQAQHNHICSDLCHLFTRFVNPFDVVYARHWRDVWPERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDK*PNVRGINNYFMMQAWYMYHDPTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMKGNIGTERVKALAQNCIDR!GTSSLDDDCVYYECCARWELRNMFVMSNRDPGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSRCCMACS", "mutations": [{"position": 140, "type": "stop", "char": "*", "description": "Stop codon at alignment column 140"}, {"position": 215, "type": "frameshift", "char": "!", "description": "Frameshift at alignment column 215"}], "score": 791.64, "stop_count": 1, "frameshift_count": 1, "alignment_lines": [], "identity": 99.33333333333333, "length": 300}]</script>
+<script id="overview-data" type="application/json">[{"locus_id": "demo_A.t1", "final": true, "score": 791.64, "stops": 1, "frameshifts": 1, "identity": 99.33333333333333, "length": 300}, {"locus_id": "demo_B.t1", "final": false, "score": 826.07, "stops": 0.0, "frameshifts": 0.0, "identity": 100.0, "length": 300.0}]</script>
+<script>/* Offline GeneWise charts; all data are embedded in the report. */
+(() => {
+  const selector = document.getElementById('overview-scope');
+  if (!selector) return;
+  const records = JSON.parse(document.getElementById('overview-data').textContent);
+  const ns = 'http://www.w3.org/2000/svg';
+  const colors = { score: '#559dcc', stops: '#d44c60', frameshifts: '#dc962e', identity: '#409d79', scatter: '#9470b4', length: '#748b9e' };
+  const finite = value => typeof value === 'number' && Number.isFinite(value);
+  const fmt = value => value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  function node(parent, tag, attrs = {}, label) {
+    const el = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+    if (label !== undefined) el.textContent = label;
+    parent.appendChild(el);
+    return el;
+  }
+  function chart(key, description) {
+    const svg = document.getElementById(`overview-${key}`);
+    svg.replaceChildren();
+    node(svg, 'title', {}, description);
+    return svg;
+  }
+  function caption(key, text) { document.getElementById(`overview-${key}-caption`).textContent = text; }
+  function empty(key) {
+    const svg = chart(key, 'No measurements available');
+    node(svg, 'text', { x: 200, y: 130, 'text-anchor': 'middle', fill: '#506176' }, 'No measurements available');
+    caption(key, 'Missing measurements are excluded.');
+  }
+  function axes(svg, xmax, ymax, xlabel, ylabel, xmin = 0, ymin = 0, categories = null) {
+    if (ylabel === 'Alignments') ymax = Math.max(4, Math.ceil(ymax / 4) * 4);
+    const box = { left: 66, top: 20, width: 314, height: 190 };
+    const x = value => box.left + (value - xmin) / (xmax - xmin) * box.width;
+    const y = value => box.top + box.height - (value - ymin) / (ymax - ymin) * box.height;
+    for (let i = 0; i <= 4; i++) {
+      const xv = xmin + (xmax - xmin) * i / 4;
+      const yv = ymin + (ymax - ymin) * i / 4;
+      node(svg, 'line', { x1: box.left, x2: box.left + box.width, y1: y(yv), y2: y(yv), stroke: '#e3e8ef' });
+      node(svg, 'text', { x: box.left - 7, y: y(yv) + 4, 'text-anchor': 'end', fill: '#506176', 'font-size': 11 }, fmt(yv));
+      if (!categories) node(svg, 'text', { x: x(xv), y: 230, 'text-anchor': i === 0 ? 'start' : i === 4 ? 'end' : 'middle', fill: '#506176', 'font-size': 11 }, fmt(xv));
+    }
+    if (categories) {
+      const stride = Math.max(1, Math.ceil(categories.length / 5));
+      categories.forEach((label, index) => {
+        if (index % stride === 0 || index === categories.length - 1) node(svg, 'text', { x: x(index + 0.5), y: 230, 'text-anchor': 'middle', fill: '#506176', 'font-size': 11 }, label);
+      });
+    }
+    node(svg, 'path', { d: `M${box.left},${box.top}V210H380`, fill: 'none', stroke: '#93a1af' });
+    node(svg, 'text', { x: 220, y: 258, 'text-anchor': 'middle', fill: '#182333', 'font-size': 12 }, xlabel);
+    node(svg, 'text', { x: 14, y: 118, transform: 'rotate(-90 14 118)', 'text-anchor': 'middle', fill: '#182333', 'font-size': 12 }, ylabel);
+    return { x, y, box };
+  }
+  function histogram(data, key, field, xlabel, color) {
+    const values = data.map(record => record[field]).filter(finite);
+    if (!values.length) return empty(key);
+    let min = Infinity, max = -Infinity;
+    values.forEach(value => { min = Math.min(min, value); max = Math.max(max, value); });
+    if (min === max) { const pad = Math.max(1, Math.abs(min) * 0.02); min = Math.max(0, min - pad); max += pad; }
+    if (field === 'identity') { min = Math.max(0, min); max = Math.min(100, max); }
+    const bins = Array(10).fill(0);
+    const width = (max - min) / bins.length;
+    values.forEach(value => { bins[Math.min(9, Math.max(0, Math.floor((value - min) / width)))]++; });
+    const svg = chart(key, `${values.length} measured alignments`);
+    const a = axes(svg, max, Math.max(1, ...bins), xlabel, 'Alignments', min);
+    bins.forEach((count, index) => {
+      const bar = node(svg, 'rect', { x: a.x(min + index * width) + 1, y: a.y(count), width: a.box.width / 10 - 2, height: 210 - a.y(count), fill: color });
+      node(bar, 'title', {}, `${fmt(min + index * width)}–${fmt(min + (index + 1) * width)}: ${count} alignments`);
+    });
+    caption(key, `${values.length} measured alignments; ${data.length - values.length} missing.`);
+  }
+  function donut(data) {
+    const stops = data.reduce((sum, record) => sum + (finite(record.stops) ? record.stops : 0), 0);
+    const frames = data.reduce((sum, record) => sum + (finite(record.frameshifts) ? record.frameshifts : 0), 0);
+    const total = stops + frames;
+    const svg = chart('events', `${stops} stop events and ${frames} frameshift events`);
+    const radius = 70, circumference = 2 * Math.PI * radius;
+    node(svg, 'circle', { cx: 200, cy: 110, r: radius, fill: 'none', stroke: '#e9eef3', 'stroke-width': 32 });
+    if (total) {
+      let offset = 0;
+      [[stops, colors.stops, 'Stop codons'], [frames, colors.frameshifts, 'Frameshifts']].forEach(([count, color, label]) => {
+        if (count) {
+          const arc = node(svg, 'circle', { cx: 200, cy: 110, r: radius, fill: 'none', stroke: color, 'stroke-width': 32, 'stroke-dasharray': `${count / total * circumference} ${circumference}`, 'stroke-dashoffset': -offset, transform: 'rotate(-90 200 110)' });
+          node(arc, 'title', {}, `${label}: ${count} events`);
+        }
+        offset += count / total * circumference;
+      });
+    }
+    node(svg, 'text', { x: 200, y: 108, 'text-anchor': 'middle', fill: '#182333', 'font-size': 24 }, fmt(total));
+    node(svg, 'text', { x: 200, y: 130, 'text-anchor': 'middle', fill: '#506176', 'font-size': 12 }, 'events');
+    [[stops, colors.stops, 'Stops'], [frames, colors.frameshifts, 'Frameshifts']].forEach(([count, color, label], index) => {
+      node(svg, 'rect', { x: 75, y: 213 + index * 22, width: 12, height: 12, fill: color });
+      node(svg, 'text', { x: 95, y: 224 + index * 22, fill: '#182333', 'font-size': 12 }, `${label}: ${fmt(count)}`);
+    });
+    const missing = data.filter(record => !finite(record.stops) || !finite(record.frameshifts)).length;
+    caption('events', `Counts are events, not loci. ${missing} alignment(s) have missing event measurements.`);
+  }
+  function mutations(data) {
+    const measured = data.filter(record => finite(record.stops) || finite(record.frameshifts));
+    if (!measured.length) return empty('mutations');
+    const bins = Array.from({ length: 11 }, () => [0, 0]);
+    measured.forEach(record => [record.stops, record.frameshifts].forEach((count, series) => {
+      if (finite(count)) bins[Math.min(10, Math.max(0, Math.round(count)))][series]++;
+    }));
+    let last = 0;
+    bins.forEach((counts, index) => { if (counts.some(count => count > 0)) last = index; });
+    const size = Math.max(2, last + 1);
+    const svg = chart('mutations', 'Distribution of stop and frameshift counts per alignment');
+    const a = axes(svg, size, Math.max(1, ...bins.flat()), 'Events per alignment', 'Alignments', 0, 0,
+      Array.from({ length: size }, (_, index) => index === 10 ? '10+' : String(index)));
+    bins.slice(0, size).forEach((counts, index) => {
+      counts.forEach((count, series) => {
+        const bar = node(svg, 'rect', { x: a.x(index) + 2 + series * a.box.width / size * 0.42, y: a.y(count), width: a.box.width / size * 0.38, height: 210 - a.y(count), fill: series ? colors.frameshifts : colors.stops });
+        node(bar, 'title', {}, `${series ? 'Frameshifts' : 'Stops'}, ${index === 10 ? '10+' : index} events: ${count} alignments`);
+      });
+    });
+    caption('mutations', 'Red: stops · Orange: frameshifts. Missing measurements excluded; 10+ events grouped.');
+  }
+  function scatter(data, key, xfield, xlabel) {
+    const points = data.filter(record => finite(record[xfield]) && finite(record.identity));
+    if (!points.length) return empty(key);
+    let xmax = 1;
+    points.forEach(record => { xmax = Math.max(xmax, record[xfield]); });
+    const svg = chart(key, `${points.length} measured alignments`);
+    const a = axes(svg, xmax * 1.05, 100, xlabel, 'Identity (%)');
+    const step = Math.max(1, Math.ceil(points.length / 2000));
+    let shown = 0;
+    points.forEach((record, index) => {
+      if (index % step) return;
+      const point = node(svg, 'circle', { cx: a.x(record[xfield]), cy: a.y(record.identity), r: 3, fill: key === 'identity-score' ? colors.scatter : colors.identity, opacity: 0.65 });
+      node(point, 'title', {}, `${record.locus_id}: ${xlabel} ${fmt(record[xfield])}; identity ${fmt(record.identity)}%`);
+      shown++;
+    });
+    caption(key, `${points.length} measured alignments; ${data.length - points.length} missing.` + (shown < points.length ? ` Showing ${shown} representative points.` : ''));
+  }
+  function render() {
+    const data = records.filter(record => selector.value !== 'final' || record.final);
+    const count = key => data.filter(record => finite(record[key]) && record[key] > 0).length;
+    const scores = data.map(record => record.score).filter(finite);
+    const values = { alignments: data.length, stops: count('stops'), frameshifts: count('frameshifts'), both: data.filter(record => record.stops > 0 && record.frameshifts > 0).length,
+      score: scores.length ? fmt(scores.reduce((sum, value) => sum + value, 0) / scores.length) : 'Not assessed' };
+    Object.entries(values).forEach(([key, value]) => { document.getElementById(`overview-stat-${key}`).textContent = value; });
+    document.getElementById('overview-scope-note').textContent = `${data.length} measured alignment record(s). ` + (selector.value === 'final' ? 'Only final candidate loci are included.' : 'Includes loci excluded by downstream filters; this is not the final pseudogene count.') + ` Average score uses ${scores.length} available scores. Table search and pagination do not change this overview.`;
+    histogram(data, 'score', 'score', 'Score (bits)', colors.score);
+    donut(data);
+    mutations(data);
+    histogram(data, 'identity', 'identity', 'Amino-acid identity (%)', colors.identity);
+    scatter(data, 'identity-score', 'score', 'Score (bits)');
+    scatter(data, 'length-identity', 'length', 'Alignment length (aa)');
+    histogram(data, 'length', 'length', 'Alignment length (aa)', colors.length);
+  }
+  selector.addEventListener('change', render);
+  render();
+})();
+</script>
+<script>
+const search = document.getElementById('candidate-search');
+if (search) {
+  const rows = Array.from(document.querySelectorAll('.candidate-row'));
+  const previous = document.getElementById('candidate-prev');
+  const next = document.getElementById('candidate-next');
+  let page = 0;
+  const pageSize = 20;
+  const renderCandidates = () => {
+    const term = search.value.trim().toLowerCase();
+    const matches = rows.filter(row => row.dataset.search.includes(term));
+    const pages = Math.ceil(matches.length / pageSize);
+    page = Math.max(0, Math.min(page, pages - 1));
+    const visible = new Set(matches.slice(page * pageSize, (page + 1) * pageSize));
+    rows.forEach(row => {
+      row.hidden = !visible.has(row);
+      const button = row.querySelector('.candidate-toggle');
+      const detail = document.getElementById(button.getAttribute('aria-controls'));
+      detail.hidden = row.hidden || button.getAttribute('aria-expanded') !== 'true';
+    });
+    const first = matches.length ? page * pageSize + 1 : 0;
+    const last = Math.min((page + 1) * pageSize, matches.length);
+    document.getElementById('search-status').textContent = `Showing ${first}–${last} of ${matches.length} candidates (${rows.length} total) · Page ${pages ? page + 1 : 0} of ${pages}`;
+    document.getElementById('candidate-page').textContent = `Page ${pages ? page + 1 : 0} of ${pages}`;
+    document.getElementById('no-candidate-matches').hidden = matches.length !== 0;
+    previous.disabled = page === 0;
+    next.disabled = !pages || page >= pages - 1;
+  };
+  search.addEventListener('input', () => { page = 0; renderCandidates(); });
+  previous.addEventListener('click', () => { page--; renderCandidates(); });
+  next.addEventListener('click', () => { page++; renderCandidates(); });
+  rows.forEach(row => {
+    const button = row.querySelector('.candidate-toggle');
+    button.addEventListener('click', () => {
+      button.setAttribute('aria-expanded', button.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+      renderCandidates();
+    });
+  });
+  renderCandidates();
+}
+</script></body></html>

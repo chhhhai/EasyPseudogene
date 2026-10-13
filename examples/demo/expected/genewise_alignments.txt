@@ -1,0 +1,170 @@
+genewise $Name: wise2-4-1 $ (unreleased release)
+This program is freely distributed under a GPL. See source directory
+Copyright (c) GRL limited: portions of the code are from separate copyright
+
+Query protein:       demo_A.t1
+Comp Matrix:         BLOSUM62.bla
+Gap open:            12
+Gap extension:       2
+Start/End            default
+Target Sequence      cross_disrupted_A:1-2102
+Strand:              forward
+Start/End (protein)  default
+Gene Parameter file: gene.stat
+Splice site model:   GT/AG only
+GT/AG bits penalty   -9.96
+Codon Table:         codon.table
+Subs error:          1e-06
+Indel error:         1e-06
+Null model           syn
+Algorithm            623
+
+genewise output
+Score 791.64 bits over entire alignment
+Scores as bits over a synchronous coding model
+
+Warning: The bits scores is not probablistically correct for single seqs
+See WWW help for more info
+
+demo_A.t1          1 MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILA 
+                     MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILA 
+                     MYRHWMSEQYYYCIWDAIWVEIYFHRSFCFIGWYMPQMSWVSSQRPILA 
+cross_disrupted  601 atcctatgcttttatggatggattccttttagttaccattgttcccacg 
+                     tagagtcaaaaagtgactgtatatagctgttggatcatcgtccagcttc 
+                     gtttggtaatttctgtttgtattctttcccttgtgtagtgtttatttgt 
+
+
+demo_A.t1         50 FQIEYCRDSVRFTAQAQHNHICSDLCHLFTRFVNPFDVVYARHWRDVWP 
+                     FQIEYCRDSVRFTAQAQHNHICSDLCHLFTRFVNPFDVVYARHWRDVWP 
+                     FQIEYCRDSVRFTAQAQHNHICSDLCHLFTRFVNPFDVVYARHWRDVWP 
+cross_disrupted  748 tcagttcgtgctagcgccacattgctcctactgactgggtgcctcggtc 
+                     tataaggactgtccacaaaatgcatgattcgttactattacgaggatgc 
+                     catatctttttcttatattttcttgctgcttctttctttttttgtttgt 
+
+
+demo_A.t1         99 ERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDKRPNVRGIN 
+                     ERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDK PNVRGIN 
+                     ERWMLTWNRSPCKHINLYKVKGWNWWKHIYWMHHIAEMVDKXPNVRGIN 
+cross_disrupted  895 gctacatactctacaactagagtattacattaccaggaggatcagcgaa 
+                     aggttcgagccgaatataataggaggaatagtaatcattaaacatggta 
+                     atgggtgttttcatttgtatatgtggatttggttttagttaattttttt 
+
+
+demo_A.t1        148 NYFMMQAWYMYHDPTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMK 
+                     NYFMMQAWYMYHDPTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMK 
+                     NYFMMQAWYMYHDPTNADQDTVHMFVCPCMAYRLVVIIGQWEEYTQPMK 
+cross_disrupted 1042 attaacgttatcgcaaggcgagcatgtctagtccggaagctggtaccaa 
+                     aatttacgataaaccacaaactatttgcgtcagtttttgagaaacacta 
+                     ttcggatgtgttttttttattttgctctcgtttgtttttagaattatga 
+
+
+demo_A.t1        197 GNIGTERVKALAQNCIDRLGTSSLDDDCVYYECCARWELRNMFVMSNRD 
+                     GNIGTERVKALAQNCIDR GTSSLDDDCVYYECCARWELRNMFVMSNRD 
+                     GNIGTERVKALAQNCIDR!GTSSLDDDCVYYECCARWELRNMFVMSNRD 
+cross_disrupted 1189 gaagagcgagcgcatagc2gattcgggtgttgttgctgccaatgatacg 
+                     gatgcagtactcaagtag gccctaaagtaaaggcggatgattttcaga 
+                     tttttattatgtatcttt ttttgtttctttaccttgagttgctgtttt 
+
+
+demo_A.t1        246 PGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSR 
+                     PGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSR 
+                     PGSWLTWSILGGKKRMECLQWSNHPMYANLIRGWPPSGMKQETIPDTSR 
+cross_disrupted 1335 cgttcattacggaacagtccttaccatgacacgtcctgaacgaacgatc 
+                     cgcgtcgcttggaagtagtagcaactacattgggcccgtaaactcaccg 
+                     tttggtgttgttaatgacgagttttgtttgtttgttttgaaattttttt 
+
+
+demo_A.t1        295 CCMACS                                            
+                     CCMACS                                            
+                     CCMACS                                            
+cross_disrupted 1482 ttagtt                                            
+                     ggtcgc                                            
+                     ccgtct                                            
+
+
+//
+genewise $Name: wise2-4-1 $ (unreleased release)
+This program is freely distributed under a GPL. See source directory
+Copyright (c) GRL limited: portions of the code are from separate copyright
+
+Query protein:       demo_B.t1
+Comp Matrix:         BLOSUM62.bla
+Gap open:            12
+Gap extension:       2
+Start/End            default
+Target Sequence      cross_intact_B:1-2103
+Strand:              forward
+Start/End (protein)  default
+Gene Parameter file: gene.stat
+Splice site model:   GT/AG only
+GT/AG bits penalty   -9.96
+Codon Table:         codon.table
+Subs error:          1e-06
+Indel error:         1e-06
+Null model           syn
+Algorithm            623
+
+genewise output
+Score 826.07 bits over entire alignment
+Scores as bits over a synchronous coding model
+
+Warning: The bits scores is not probablistically correct for single seqs
+See WWW help for more info
+
+demo_B.t1          1 MELWKVYQTDMAYWPNFPIRYAFTWTMTDMCLIMYRPVANTWGDSESPG 
+                     MELWKVYQTDMAYWPNFPIRYAFTWTMTDMCLIMYRPVANTWGDSESPG 
+                     MELWKVYQTDMAYWPNFPIRYAFTWTMTDMCLIMYRPVANTWGDSESPG 
+cross_intact_B:  601 agctagtcagagttcatcactgtataaagatcaatccggaatggtgtcg 
+                     tatgataacatcagcatctgactcgctcatgtttagctcacggacaccg 
+                     gaggattattgttgttctttttctgtgttgcgtgtttttttgtttattt 
+
+
+demo_B.t1         50 RLVWCDIIIWLNDDGNPSNQKRDVNPYHYPYNNLRVQYRMKVAAGFSSW 
+                     RLVWCDIIIWLNDDGNPSNQKRDVNPYHYPYNNLRVQYRMKVAAGFSSW 
+                     RLVWCDIIIWLNDDGNPSNQKRDVNPYHYPYNNLRVQYRMKVAAGFSSW 
+cross_intact_B:  748 ccgttgaaatcagggactacacggactctctaaccgctcaaggggtttt 
+                     gttggatttgtaaagaccaaagatacaaacaaatgtaagtatccgtccg 
+                     tgtgcttttggttttttttaattttttttttttgttattgattttcttg 
+
+
+demo_B.t1         99 GSCFCQGYWCPHQTCSFKGAYYMLSHEWYRVFQKNASGEVSIHQRPYQN 
+                     GSCFCQGYWCPHQTCSFKGAYYMLSHEWYRVFQKNASGEVSIHQRPYQN 
+                     GSCFCQGYWCPHQTCSFKGAYYMLSHEWYRVFQKNASGEVSIHQRPYQN 
+cross_intact_B:  895 gttttcgtttcccatttaggttactcgttcgtcaagtgggtacccctca 
+                     gcgtgagaggcaacgctagcaattcaagagttaaaccgatctaagcaaa 
+                     ttcccattgcttatctcattttggttagtttcaattttattttatttat 
+
+
+demo_B.t1        148 DEENSRKGVNHYHNFIGNCRPMTTPWEDQVMTTCYGFDRTGSKPISTYN 
+                     DEENSRKGVNHYHNFIGNCRPMTTPWEDQVMTTCYGFDRTGSKPISTYN 
+                     DEENSRKGVNHYHNFIGNCRPMTTPWEDQVMTTCYGFDRTGSKPISTYN 
+cross_intact_B: 1042 gggatcaggactcatagatccaaactggcgaaattgtgcagtacatata 
+                     aaaacgagtaaaaattgaggctcccgaaattccgagtagcgcactccaa 
+                     taatttatttttttctttcttgtttgatatgttcttctttttatttttt 
+
+
+demo_B.t1        197 AYTARQAMAHSIRDCPSYVMMECFNPAPKNNNNMCPFRVVWSADLWRPP 
+                     AYTARQAMAHSIRDCPSYVMMECFNPAPKNNNNMCPFRVVWSADLWRPP 
+                     AYTARQAMAHSIRDCPSYVMMECFNPAPKNNNNMCPFRVVWSADLWRPP 
+cross_intact_B: 1189 gtagccgagctacgtcttgaagttacgcaaaaaatctcggttggctccc 
+                     caccgactcactgagccatttagtacccaaaaatgctgttgccatggcc 
+                     tttttatgttttttcttttggaccttttattttgctctttgtttggttt 
+
+
+demo_B.t1        246 FQKEWGASMDENQFTSFHNTMKNSVKVMRFARSPIYSFAGPRQWTLIHQ 
+                     FQKEWGASMDENQFTSFHNTMKNSVKVMRFARSPIYSFAGPRQWTLIHQ 
+                     FQKEWGASMDENQFTSFHNTMKNSVKVMRFARSPIYSFAGPRQWTLIHQ 
+cross_intact_B: 1336 tcagtggtaggactattcaaaaatgagactgctcatttggccctacacc 
+                     taaaggcctaaaatcctaactaactattgtcgcctactcgcgagcttaa 
+                     caaagtttgtatacttctttgatttatgtctttttttcttttagtgtta 
+
+
+demo_B.t1        295 HVFFWG                                            
+                     HVFFWG                                            
+                     HVFFWG                                            
+cross_intact_B: 1483 cgtttg                                            
+                     atttgg                                            
+                     ttccgt                                            
+
+
+//

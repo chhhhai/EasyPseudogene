@@ -1,0 +1,3 @@
+query_id	selected_loci	disruption_loci	putative_loci	family_copy_pass_loci	final_loci	status
+demo_A.t1	1	1	1	1	1	final_candidate
+demo_B.t1	1	0	0	0	0	aligned_no_disruption

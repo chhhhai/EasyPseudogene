@@ -1,0 +1,10 @@
+{
+  "species": "synthetic_demo",
+  "comparison_mode": "cross",
+  "workflow": "standard",
+  "analysis_version": "3.0.13-dev",
+  "snapshot_only": true,
+  "origin": "Bundled synthetic installation demo",
+  "viewer_scope": "Final candidate table; selectable all/final GeneWise overview",
+  "report_version": "3.0.16-dev"
+}

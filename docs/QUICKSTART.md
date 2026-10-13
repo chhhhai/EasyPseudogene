@@ -10,7 +10,7 @@ bash examples/demo/run_demo.sh
 It runs both comparison modes with two threads and prints `DEMO PASS` after
 checking the expected results. See [Demo details](../examples/demo/README.md).
 
-These commands describe the interface in 1.1.0. Use the
+These commands describe the development interface in 1.1.1-dev. Use the
 matching source checkout and a fresh output directory. See [installation](INSTALL.md)
 if the executable or its dependencies are not available.
 

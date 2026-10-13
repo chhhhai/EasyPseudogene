@@ -245,7 +245,7 @@ Optional:
   --synteny-tsv FILE    Independent target intervals; requires ENABLE_SYNTENY_FILTER=1
   --skip-genewise       Skip GeneWise step (use existing results)
   --skip-filter         Skip filtering step (use existing results)
-  --visualize           Generate HTML visualization report after completion
+  --visualize           Compatibility option; report.html includes final alignments
   --help                Show this help message
 
 Examples:
@@ -1240,23 +1240,7 @@ else
     echo "[3/3] Skipping filtering (--skip-filter)"
 fi
 
-# Generate visualization if requested
-if [[ -n "${GENERATE_VISUALIZATION:-}" ]]; then
-    echo "[Visualization] Generating HTML report..."
-    genewise_file="${WORK_DIR}/genewise/pseudogene-genewise.txt"
-    visualization_file="${RUN_DIR}/results/genewise_alignment.html"
-    mkdir -p "${RUN_DIR}/results"
-    
-    if [[ -s "${genewise_file}" ]]; then
-        python3 "${LIB_DIR}/visualize_genewise.py" \
-            --genewise "${genewise_file}" \
-            --output "${visualization_file}"
-        echo "  Visualization saved to: ${visualization_file}"
-    else
-        echo "  WARNING: GeneWise output not found or empty, skipping visualization" >&2
-    fi
-    echo ""
-fi
+# Final-candidate alignment details are included in report.html by the publisher.
 
 if [[ -f "${WORK_DIR}/post_genewise_filter/high_confidence_pseudogene_ids.txt" ]]; then
     echo "[Results] Publishing per-locus results, QC and metadata..."

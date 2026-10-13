@@ -1,0 +1,22 @@
+{
+  "analysis_version": "3.0.13-dev",
+  "source": "Existing checked execution of the bundled synthetic demo",
+  "candidate_query": "demo_A.t1",
+  "dataset_seed": 20261013,
+  "files": {
+    "README.md": "20e0eebe2c57460f9cede4e0ea5432c3424e88f145185e4fe225c5e1a2a82689",
+    "genewise_alignments.txt": "20541a54777ad0dfb6fe86c42e0d8cf76967ceac39dd62ee9f2cc983e99682b3",
+    "genewise_candidate.txt": "a5e1daf2cd62e3209d71f0c4ec1a4d005cf7e90fe006878e451ca97c1234a18d",
+    "metadata/run_manifest.json": "133efdf4bf89cd96f7da170d3be55e7734c97b621f84370fe96dd75e2d393184",
+    "qc/input_qc.json": "a55ecdc2d7f3a73567b69c3a3c3e905aa5b9ce183d33205079967a74a0afb176",
+    "qc/stage_counts.tsv": "e3693993b8a37f6f482fc254be6fb38dbed11c7422b6043d7d157fc039f5b936",
+    "report.html": "90f2cba06790a7db718ad84044a3d711aaa7869d1c9663ee3af7d519c98d86a6",
+    "results/final_loci.bed": "a8693cd786843ac3ef41e7474b97aecb573654e5569504224ee3bd7f79b7caac",
+    "results/final_loci.gff3": "a8df37d89eed5b9a4539218fb4618e730fdca7a9d942a044eb3fa760efd993e3",
+    "results/final_loci.tsv": "929599b27e9d76a99ed535ca0c431682c6daa124184954bbfde40373f4cf4bfd",
+    "results/final_queries.txt": "0007f574d3c3e60ea274f01a9f888ec33fc9e8c4236f3bfa5bb0387c537c0d01",
+    "results/loci.tsv": "53d06c997fecc75c65eda9e964b7459b0a054844abfb178e0b4c79bc0b8bf592",
+    "results/queries.tsv": "83452a4afffd2fb5346647cb466ee9a86de0a1d9da68e90906ff74bd4a53642a",
+    "results/summary.json": "2787458d047249bf4f44d0ac3bdb9f18818bf30ed3cf86a74101956b6dea0a4a"
+  }
+}

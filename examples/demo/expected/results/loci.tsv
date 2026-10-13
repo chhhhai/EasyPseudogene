@@ -1,0 +1,3 @@
+locus_id	query_id	chrom	start0	end0	strand	genewise_status	genewise_stops	genewise_frameshifts	stage	decision_reason	decision_detail	neighborhood_synteny_status	neighborhood_synteny_reason	evidence_query_id	stop_count	frameshift_count	query_coverage	alignment_identity	aligned_length	identity_metric	evidence_method	evidence_level	evidence_reason
+demo_A.t1	demo_A.t1	cross_disrupted_A	600	1499	+	completed	1	1	final_candidate	passed_all_enabled_filters		not_assessed		demo_A.t1	1	1	1.0	0.9933	300	query_amino_acid_identity	GeneWise	high	disruption_with_strong_alignment_support
+demo_B.t1	demo_B.t1	cross_intact_B	600	1500	+	completed	0	0	aligned	no_genewise_disruption		not_assessed		demo_B.t1	0	0	1.0	1.0	300	query_amino_acid_identity	GeneWise	low	no_detected_sequence_disruption

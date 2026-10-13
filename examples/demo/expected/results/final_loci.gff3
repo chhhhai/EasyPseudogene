@@ -1,0 +1,3 @@
+##gff-version 3
+# Computational pseudogene candidates; evidence grades are not biological confidence probabilities.
+cross_disrupted_A	EasyPseudogene	pseudogene	601	1499	.	+	.	ID=demo_A.t1;Name=demo_A.t1;reference_protein=demo_A.t1;evidence_query_id=demo_A.t1;evidence_level=high;evidence_method=GeneWise;stop_count=1;frameshift_count=1;query_coverage=1.0;alignment_identity=0.9933;identity_metric=query_amino_acid_identity;decision_reason=passed_all_enabled_filters

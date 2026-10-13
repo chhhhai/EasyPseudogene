@@ -1,0 +1,8 @@
+stage	loci_or_inputs	queries
+input	2	2
+selected_alignment	2	2
+genewise_completed	2	2
+genewise_disruption	1	1
+putative	1	1
+family_copy_pass	1	1
+final_candidate	1	1

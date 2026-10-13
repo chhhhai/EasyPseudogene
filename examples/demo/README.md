@@ -5,6 +5,27 @@ downloading external sequences. It exercises input preparation, miniprot,
 GeneWise, filtering, result exports, report links and GeneWise path discovery.
 It is an installation check, not a biological accuracy benchmark.
 
+## See a detected candidate
+
+The [merged report](expected/report.html) contains statistics, final-candidate
+alignments with highlighted disruptions, filtering diagnostics and downloads. The candidate table shows 20 rows per
+page, supports search across all candidates, and expands alignments below the
+selected row. All alignments start collapsed. Five GeneWise statistics and
+seven overview charts are above the table. Use the scope selector to compare
+all completed GeneWise alignments with final candidate alignments; changing
+the table page or search does not change the charts.
+It uses results from an actual execution of this synthetic demo. Open the HTML
+in a browser, or run the demo below to reproduce the analysis.
+
+| Candidate | Stops | Frameshifts | Query coverage | Amino-acid identity |
+| --- | --- | --- | --- | --- |
+| `demo_A.t1` | 1 | 1 | 100% | 99.33% |
+
+The report contains only this final candidate. Click its candidate ID to see the red
+stop marker and orange frameshift marker. The intact `demo_B.t1` control is
+excluded. The [raw GeneWise candidate output](expected/genewise_candidate.txt)
+and TSV/BED/GFF3 files are also included under `expected/`.
+
 ## Run both modes
 
 Activate an environment containing Python 3, miniprot, wise2 and samtools.
@@ -56,9 +77,10 @@ the engineered stop and frameshift to be recovered, the expected candidate
 queries and decisions, matching export coordinates and complete outputs. A
 failure needs inspection; do not relax filters merely to obtain `DEMO PASS`.
 
-The 3.0.11-dev combined demo was checked on 2026-10-13 with an existing Conda
+The 3.0.13-dev combined demo was checked on 2026-10-13 with an existing Conda
 installation, automatic GeneWise discovery and two threads. One recorded run
-completed in 25 seconds. Runtime on other systems can differ.
+completed in 7 seconds; 104 regression tests passed. Runtime on other systems
+can differ.
 
 ## Outputs
 
@@ -82,9 +104,13 @@ demo_output/
     └── work/
 ```
 
-Open `cross/report.html` or `self/report.html`. Cross also produces
-`cross/results/genewise_alignment.html`. The JSON check record stores `passed`
-or `failed` when checking an existing output directory.
+Open `cross/report.html` to inspect the detected candidate and run statistics,
+or `self/report.html` for the negative control. A separate final-candidate
+viewer is no longer produced. The JSON check record stores `passed` or `failed`.
+
+The report, candidate search and alignment details work offline, with no CDN
+or external JavaScript dependency. The standalone `easypseudogene-visualize`
+command remains available for advanced inspection of raw GeneWise outputs.
 
 Recheck a completed demo:
 
