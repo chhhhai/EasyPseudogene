@@ -294,32 +294,9 @@ candidates; its conditions and alternative workflows are described in
 
 Results use `high`, `medium`, `low` and `unassessed` **sequence-evidence grades**.
 Grades are separate from filter decisions and are not calibrated probabilities
-of true pseudogene status. Missing measurements remain explicit. Final
-candidates require biological review; RELAX is outside the core workflow.
+of true pseudogene status.
 
-## Validation
 
-The frozen **3.0.10-dev** checkout passed **93 regression tests and 20 runtime
-checks**. Real BRAKER data checks included:
-
-- Complete input preparation for 20,669 T. rubra and 30,536 T. dohrnii protein
-  records; one invalid T. rubra protein was explicitly excluded.
-- Cross analysis of 200 reference genes against the whole target genome.
-- Self analysis of 40 original proteins, with subset and whole-genome targets.
-- Output directories, report links, GFF3/TSV/BED equivalence, empty results,
-  reference translation and cache protection.
-
-These checks establish execution and output consistency within that scope.
-They do not establish a general biological precision or recall value.
-The recorded **1.1.1-dev** checkout passed **98 regression tests** and the
-bundled synthetic Cross/Self installation demo, using automatic GeneWise
-discovery in an existing Conda installation. This revision has not had a new
-full BRAKER discovery validation. The **3.0.12-dev** report-language revision
-has syntax and report-rendering checks only. See [Validation details](docs/VALIDATION.md).
-
-The **3.0.13-dev** viewer/Demo revision passed **104 regression tests** and a new
-combined synthetic run. The final candidate viewer agrees with the TSV stop,
-frameshift and identity fields. See [Demo details](examples/demo/README.md).
 
 ## Documentation
 
