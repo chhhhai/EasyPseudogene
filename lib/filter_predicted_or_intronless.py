@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import csv
 import re
 
 
@@ -51,10 +52,21 @@ def main():
     ap.add_argument("--biotype", default="")
     ap.add_argument("--exclude-biotypes", default="")
     ap.add_argument("--gtf", default="")
+    ap.add_argument("--annotations", default="", help="Reference annotation TSV keyed by query_id")
+    ap.add_argument("--locus-map", default="", help="Map locus protein IDs to reference query IDs")
     args = ap.parse_args()
 
     patterns = parse_patterns(args.patterns)
     desc_map = parse_desc(args.desc)
+    annotations = {}
+    if args.annotations:
+        with open(args.annotations, newline="") as fh:
+            annotations = {row["query_id"]: row for row in csv.DictReader(fh, delimiter="\t")}
+    locus_query = {}
+    if args.locus_map:
+        with open(args.locus_map, newline="") as fh:
+            locus_query = {row["locus_id"]: row["query_id"]
+                           for row in csv.DictReader(fh, delimiter="\t")}
 
     exclude_biotypes = set()
     if args.exclude_biotypes:
@@ -103,7 +115,6 @@ def main():
                     attr = parts[8]
                     tid = None
                     if "transcript_id" in attr:
-                        import re
                         m = re.search(r'transcript_id \"([^\"]+)\"', attr)
                         if m:
                             tid = m.group(1)
@@ -125,13 +136,14 @@ def main():
                 header = line[1:].strip()
                 parts = header.split()
                 tid = parts[0]
-                gene_id = ""
-                gene_symbol = ""
+                annotation = annotations.get(locus_query.get(tid, tid), {})
+                gene_id = annotation.get("gene_id", "")
+                gene_symbol = annotation.get("gene_symbol", "")
                 for tok in parts[1:]:
-                    if tok.startswith("gene="):
-                        gene_id = tok.split("=", 1)[1]
-                    elif tok.startswith("gene_symbol="):
-                        gene_symbol = tok.split("=", 1)[1]
+                    if tok.startswith(("gene=", "gene:", "gene_id=", "gene_id:")) and not gene_id:
+                        gene_id = re.split("[=:]", tok, maxsplit=1)[1]
+                    elif tok.startswith(("gene_symbol=", "gene_symbol:")) and not gene_symbol:
+                        gene_symbol = re.split("[=:]", tok, maxsplit=1)[1]
 
                 matched = match_any(gene_symbol, patterns)
                 source = "gene_symbol" if matched else ""
@@ -140,11 +152,7 @@ def main():
                     if matched:
                         source = "gene_id"
                 if not matched:
-                    desc = ""
-                    if gene_id in desc_map:
-                        desc = desc_map.get(gene_id, "")
-                    elif gene_symbol in desc_map:
-                        desc = desc_map.get(gene_symbol, "")
+                    desc = desc_map.get(gene_id, desc_map.get(gene_symbol, ""))
                     matched = match_any(desc, patterns)
                     if matched:
                         source = "description"
@@ -156,6 +164,13 @@ def main():
                 if tid in biotype_hits:
                     out_ids.add(tid)
                     rep.write(f"{tid}\t{gene_id}\t{gene_symbol}\t{biotype_hits[tid]}\tbiotype\n")
+
+                if exclude_biotypes:
+                    for field in ("gene_biotype", "transcript_biotype"):
+                        value = annotation.get(field, "")
+                        if value.lower() in exclude_biotypes:
+                            out_ids.add(tid)
+                            rep.write(f"{tid}\t{gene_id}\t{gene_symbol}\t{value}\t{field}\n")
 
                 if tid in intronless:
                     out_ids.add(tid)

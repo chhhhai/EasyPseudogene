@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+from alignment_metrics import (sequence_identity,
+                               flank_identities as aligned_flank_identities,
+                               local_flank_identity)
 
 
 def parse_alignment(path):
@@ -24,20 +27,11 @@ def parse_alignment(path):
 
 
 def identity(a, b):
-    if not a or not b:
-        return 0.0
-    L = min(len(a), len(b))
-    if L == 0:
-        return 0.0
-    return sum(1 for i in range(L) if a[i] == b[i]) / L
+    return sequence_identity(a, b)
 
 
 def flank_identities(q, t, pos, flank):
-    q_b = q[max(0, pos - flank) : pos]
-    t_b = t[max(0, pos - flank) : pos]
-    q_a = q[pos + 1 : pos + 1 + flank]
-    t_a = t[pos + 1 : pos + 1 + flank]
-    return identity(q_b, t_b), identity(q_a, t_a)
+    return aligned_flank_identities(q, t, pos, flank)
 
 
 def main():
@@ -46,10 +40,10 @@ def main():
     ap.add_argument("--one-mutation-list", required=True)
     ap.add_argument("--out-stop", required=True)
     ap.add_argument("--out-shift", required=True)
-    ap.add_argument("--flank-size", type=int, default=30)
-    ap.add_argument("--flank-th", type=float, default=0.2)
+    ap.add_argument("--flank-size", type=int, default=10)
+    ap.add_argument("--flank-th", type=float, default=0.4)
     ap.add_argument("--overall-th", type=float, default=0.1)
-    ap.add_argument("--mode", choices=["and", "or"], default="and")
+    ap.add_argument("--mode", choices=["combined", "and", "or"], default="combined")
     args = ap.parse_args()
 
     one_mut = set()
@@ -76,13 +70,15 @@ def main():
             continue
         pos, mtype = min(positions, key=lambda x: x[0])
 
-        bef, aft = flank_identities(q, t, pos, args.flank_size)
-        overall = identity(q, t)
-
-        if args.mode == "and":
-            flag = (bef < args.flank_th and aft < args.flank_th and overall < args.overall_th)
+        if args.mode == "combined":
+            flag = local_flank_identity(q, t, pos, args.flank_size) < args.flank_th
         else:
-            flag = ((bef < args.flank_th or aft < args.flank_th) and overall < args.overall_th)
+            bef, aft = flank_identities(q, t, pos, args.flank_size)
+            overall = identity(q, t)
+            if args.mode == "and":
+                flag = (bef < args.flank_th and aft < args.flank_th and overall < args.overall_th)
+            else:
+                flag = ((bef < args.flank_th or aft < args.flank_th) and overall < args.overall_th)
 
         if flag:
             if mtype == "stop":

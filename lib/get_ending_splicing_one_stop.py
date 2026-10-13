@@ -6,9 +6,9 @@ Outputs:
   - ending-stop.txt: stop mutations at ending regions (< 50 aa remaining)
 """
 import argparse
-import os
 import re
 import sys
+from genewise_alignment import segments
 
 
 def main():
@@ -64,33 +64,19 @@ def main():
         if transcript_id not in one_mutation_set:
             continue
         
-        # Check for stop at splicing site (pattern: :X[)
-        if re.search(r':X\[', block):
-            print(transcript_id)
+        parsed = list(segments(block))
+        if parsed:
+            query = "".join(q for q, _ in parsed)
+            target = "".join(t for _, t in parsed)
+            if ':X[' in target:
+                out_splicing.write(f"{transcript_id}\n")
+            stops = [i for i, aa in enumerate(target) if aa == 'X']
+            if any(sum(c.isalpha() for c in query[i + 1:]) < 50 for i in stops):
+                out_ending.write(f"{transcript_id}\n")
+        elif re.search(r':X\[', block):
+            # Legacy compact alignment representation.
             out_splicing.write(f"{transcript_id}\n")
-        
-        # Check for stop at ending region (pattern: .sp.tr with * and < 50 aa remaining)
-        if re.search(r'\.sp\.tr', block):
-            # Extract ID from .sp.tr line
-            sp_tr_match = re.search(r'>(\S+?)(?:\.sp\.tr)?', block)
-            if sp_tr_match:
-                block_id = sp_tr_match.group(1)
-                if block_id == transcript_id:
-                    # Remove whitespace, newlines, carriage returns
-                    block_clean = re.sub(r'\s+', '', block)
-                    block_clean = re.sub(r'\n', '', block_clean)
-                    block_clean = re.sub(r'\r', '', block_clean)
-                    
-                    # Check for * and extract remaining sequence
-                    star_match = re.search(r'\*(\S+)$', block_clean)
-                    if star_match:
-                        remaining_prot = star_match.group(1)
-                        remaining_len = len(remaining_prot)
-                        
-                        # If remaining length < 50, it's an ending stop
-                        if remaining_len < 50:
-                            out_ending.write(f"{transcript_id}\n")
-    
+
     out_splicing.close()
     out_ending.close()
 

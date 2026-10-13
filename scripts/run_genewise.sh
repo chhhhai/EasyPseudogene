@@ -27,20 +27,23 @@ done
 
 JOBS="${JOBS:-${THREADS}}"
 
-sp_dir="${OUTPUT_DIR}/${SPECIES}"
+sp_dir="${EPG_WORK_DIR:-${OUTPUT_DIR}/${SPECIES}}"
 miniprot_dir="${sp_dir}/miniprot"
 regions_dir="${sp_dir}/regions"
 genewise_dir="${sp_dir}/genewise"
-logs_dir="${sp_dir}/logs"
+logs_dir="${EPG_LOG_DIR:-${sp_dir}/logs}"
 tmp_dir="${sp_dir}/tmp"
 
-mkdir -p "${regions_dir}" "${genewise_dir}" "${logs_dir}" "${tmp_dir}"
+source "${EASYPSEUDOGENE_DIR}/lib/genewise_env.sh"
+epg_setup_genewise
+
+mkdir -p "${regions_dir}" "${genewise_dir}" "${logs_dir}"
 
 samtools faidx "${GENOME}"
 samtools faidx "${PROTEINS}"
 
 best_hits="${miniprot_dir}/${SPECIES}.best_hits.flanked.tsv"
-if [[ ! -s "${best_hits}" ]]; then
+if [[ ! -f "${best_hits}" ]]; then
     echo "ERROR: missing ${best_hits}. Run screening first." >&2
     exit 1
 fi
@@ -48,39 +51,14 @@ fi
 jobs_tsv="${genewise_dir}/${SPECIES}.jobs.tsv"
 id_map="${regions_dir}/id_map.tsv"
 
-awk -v OFS="\t" '{
-  gene=$1; safe=gene; gsub(/[^A-Za-z0-9_.-]/,"_",safe);
-  print safe, gene;
-}' "${best_hits}" | sort -u > "${id_map}"
-
-awk -v OFS="\t" '{
-  gene=$1; strand=$2; tname=$3; start0=$4; end0=$5;
-  safe=gene; gsub(/[^A-Za-z0-9_.-]/,"_",safe);
-  start1=start0+1; end1=end0;
-  if (start1 < 1 || end1 < start1) next;
-  print gene, strand, tname, start1, end1, safe;
-}' "${best_hits}" > "${jobs_tsv}"
+python3 "${EASYPSEUDOGENE_DIR}/lib/prepare_genewise_jobs.py" \
+    --proteins "${PROTEINS}" --hits "${miniprot_dir}/${SPECIES}.best_hits.tsv" \
+    --flanked "${best_hits}" --regions "${regions_dir}" --jobs "${jobs_tsv}" \
+    --paf "${miniprot_dir}/${SPECIES}.paf"
 
 : > "${logs_dir}/genewise_failed.tsv"
 
 export PROTEINS GENOME regions_dir genewise_dir logs_dir
-
-# Set GeneWise environment if provided
-if [[ -n "${WISECONFIGDIR:-}" ]]; then
-    export WISECONFIGDIR
-    echo "  Using WISECONFIGDIR=${WISECONFIGDIR}"
-fi
-if [[ -n "${WISEPATH:-}" ]]; then
-    export PATH="${WISEPATH}:${PATH}"
-    echo "  Added ${WISEPATH} to PATH"
-fi
-
-# Check if genewise is available
-if ! command -v genewise >/dev/null 2>&1; then
-    echo "ERROR: genewise command not found in PATH" >&2
-    echo "  Please set --wiseconfig and --wisepath when running easypseudogene" >&2
-    exit 1
-fi
 
 echo "  Running GeneWise on $(wc -l < "${jobs_tsv}" | tr -d ' ') regions..."
 
@@ -90,7 +68,9 @@ if [[ -n "${WISECONFIGDIR:-}" ]]; then
     export WISECONFIGDIR
 fi
 
-cat "${jobs_tsv}" | xargs -P "${JOBS}" -n 6 bash -c '
+xargs_status=0
+tr '\t\n' '\0' < "${jobs_tsv}" | xargs -0 -r -P "${JOBS}" -n 6 bash -c '
+  set -euo pipefail
   # Re-export in sub-shell to ensure they are available
   export PROTEINS="${PROTEINS}" GENOME="${GENOME}" regions_dir="${regions_dir}" genewise_dir="${genewise_dir}" logs_dir="${logs_dir}"
   if [[ -n "${WISECONFIGDIR:-}" ]]; then
@@ -103,28 +83,36 @@ cat "${jobs_tsv}" | xargs -P "${JOBS}" -n 6 bash -c '
   pep="${regions_dir}/${safe_id}.pep.fa"
   dna="${regions_dir}/${safe_id}.dna.fa"
 
-  if [[ -s "${out}" ]]; then
-    exit 0
-  fi
-
-  if [[ ! -s "${pep}" ]]; then
-    samtools faidx "${PROTEINS}" "${gene}" > "${pep}" 2>> "${logs_dir}/genewise_failed.tsv" || { printf "%s\tpep_missing\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; exit 0; }
-  fi
-  if [[ ! -s "${dna}" ]]; then
-    samtools faidx "${GENOME}" "${tname}:${start1}-${end1}" > "${dna}" 2>> "${logs_dir}/genewise_failed.tsv" || { printf "%s\tdna_missing\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; exit 0; }
-  fi
+  # Standalone invocations recompute jobs. CLI reuse is guarded by content hashes.
+  samtools faidx "${GENOME}" "${tname}:${start1}-${end1}" > "${dna}" 2>> "${logs_dir}/genewise_failed.tsv" || { printf "%s\tdna_missing\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; exit 1; }
 
   if [[ "${strand}" == "-" ]]; then
-    genewise -trev "${pep}" "${dna}" > "${out}" 2> "${err}" || { printf "%s\tgenewise_failed\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; rm -f "${out}"; exit 0; }
+    "${GENEWISE_BIN}" -trev "${pep}" "${dna}" > "${out}.partial" 2> "${err}" || { printf "%s\tgenewise_failed\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; rm -f "${out}.partial"; exit 1; }
   else
-    genewise -tfor "${pep}" "${dna}" > "${out}" 2> "${err}" || { printf "%s\tgenewise_failed\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; rm -f "${out}"; exit 0; }
+    "${GENEWISE_BIN}" -tfor "${pep}" "${dna}" > "${out}.partial" 2> "${err}" || { printf "%s\tgenewise_failed\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"; rm -f "${out}.partial"; exit 1; }
   fi
-' _
+  if [[ ! -s "${out}.partial" ]] || ! grep -q "^Query protein:" "${out}.partial" || ! grep -q "^//" "${out}.partial"; then
+    printf "%s\tinvalid_genewise_output\n" "${gene}" >> "${logs_dir}/genewise_failed.tsv"
+    rm -f "${out}.partial"
+    exit 1
+  fi
+  mv "${out}.partial" "${out}"
+  touch "${out}.done"
+' _ || xargs_status=$?
 
-find "${genewise_dir}" -maxdepth 1 -name "*.gw.txt" -type f -size +0c | sort | xargs -r cat \
-  > "${genewise_dir}/pseudogene-genewise.txt"
+if (( xargs_status != 0 )) || [[ -s "${logs_dir}/genewise_failed.tsv" ]]; then
+    echo "ERROR: GeneWise jobs failed; no combined result published. See ${logs_dir}/genewise_failed.tsv" >&2
+    exit 1
+fi
 
-success_count=$(find "${genewise_dir}" -maxdepth 1 -name "*.gw.txt" -type f -size +0c | wc -l | tr -d ' ')
+# Concatenate only this job set, never unrelated files left in a directory.
+: > "${genewise_dir}/pseudogene-genewise.txt.partial"
+while IFS=$'\t' read -r gene strand chrom start end locus; do
+    cat "${genewise_dir}/${locus}.gw.txt" >> "${genewise_dir}/pseudogene-genewise.txt.partial"
+done < "${jobs_tsv}"
+mv "${genewise_dir}/pseudogene-genewise.txt.partial" "${genewise_dir}/pseudogene-genewise.txt"
+
+success_count=$(wc -l < "${jobs_tsv}" | tr -d ' ')
 failed_count=$(wc -l < "${logs_dir}/genewise_failed.tsv" 2>/dev/null || echo "0")
 echo "  GeneWise done: ${success_count} successful alignments"
 if [[ "${failed_count}" -gt 0 ]]; then

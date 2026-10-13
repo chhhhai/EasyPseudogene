@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Optional evidence annotation for candidates produced by a cross-species run.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+    cat <<'EOF'
+EasyPseudogene unitary evidence annotation
+
+This is an optional follow-up to a cross-species comparison, not a third
+comparison mode. It does not run the miniprot/GeneWise discovery pipeline.
+
+Usage: easypseudogene-unitary \
+  --unitary-candidates validated.tsv \
+  --proteins reference.fa --target-proteins target.fa \
+  --target-genome target.genome.fa \
+  --outgroup-proteins outgroup.fa --unitary-synteny-bed synteny.bed \
+  --threads 16 --species comparison --output results
+
+The target-genome, outgroup and synteny inputs are needed to reach the
+unitary_candidate evidence label. Missing evidence receives a needs_* label.
+Existing --unitary-reuse-* options remain available for completed searches.
+EOF
+}
+
+if [[ $# -eq 0 ]]; then
+    usage >&2
+    exit 2
+fi
+for arg in "$@"; do
+    case "${arg}" in
+        --help|-h) usage; exit 0 ;;
+        --mode) echo "ERROR: easypseudogene-unitary does not accept --mode" >&2; exit 2 ;;
+    esac
+done
+
+export EASYPSEUDOGENE_UNITARY_WRAPPER=1
+exec "${SCRIPT_DIR}/easypseudogene" --mode unitary "$@"

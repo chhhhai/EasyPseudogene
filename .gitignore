@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+backups/
+*.zip
+*.tar.gz
+.DS_Store
+.env
+
+.hermes-tmp.*
+
+easypseudogene_output/
+demo_output*/

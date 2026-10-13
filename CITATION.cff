@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "Please cite the EasyPseudogene version used and the underlying tools listed in the README."
+title: "EasyPseudogene: pseudogene candidate discovery in Cross and Self modes"
+type: software
+version: 1.1.0
+date-released: 2026-10-13
+authors:
+  - name: "EasyPseudogene Development Team"
+license: MIT
+repository-code: "https://github.com/chhhhai/EasyPseudogene"
+abstract: "EasyPseudogene compares proteins with a target genome and reports pseudogene candidates, structural-disruption evidence, filtering decisions and reproducible run metadata. Outputs are computational candidates requiring biological review."
+keywords:
+  - pseudogene
+  - comparative genomics
+  - genome annotation
+  - bioinformatics

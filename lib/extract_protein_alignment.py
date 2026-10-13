@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import re
+from genewise_alignment import segments
 
 
 def clean_target_seq(line):
@@ -33,29 +33,10 @@ def process_block(lines, out):
             break
     if not qid:
         return
-    qid_short = qid.split(".")[0]
-
-    qseq_parts = []
-    tseq_parts = []
-
-    # Iterate with index for lookahead
-    for i in range(len(lines)):
-        line = lines[i]
-        if line.startswith(qid_short):
-            parts = line.split()
-            if len(parts) < 3:
-                continue
-            qseg = parts[2]
-            # target protein line is typically two lines below
-            if i + 2 < len(lines):
-                tline = lines[i + 2]
-                tseg = clean_target_seq(tline)
-                qseq_parts.append(qseg)
-                tseq_parts.append(tseg)
-
-    if qseq_parts and tseq_parts:
-        qseq = "".join(qseq_parts)
-        tseq = "".join(tseq_parts)
+    parsed = list(segments("\n".join(lines)))
+    if parsed:
+        qseq = "".join(q for q, _ in parsed)
+        tseq = "".join(t for _, t in parsed)
         out.write(f">{qid}\n{qseq}\n{tseq}\n")
 
 

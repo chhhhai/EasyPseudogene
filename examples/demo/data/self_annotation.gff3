@@ -1,0 +1,9 @@
+##gff-version 3
+##sequence-region self_gene_A 1 2103
+self_gene_A	demo	gene	601	1503	.	+	.	ID=demo_A
+self_gene_A	demo	mRNA	601	1503	.	+	.	ID=demo_A.t1;Parent=demo_A
+self_gene_A	demo	CDS	601	1500	.	+	0	ID=demo_A.t1.cds;Parent=demo_A.t1
+##sequence-region self_gene_B 1 2103
+self_gene_B	demo	gene	601	1503	.	+	.	ID=demo_B
+self_gene_B	demo	mRNA	601	1503	.	+	.	ID=demo_B.t1;Parent=demo_B
+self_gene_B	demo	CDS	601	1500	.	+	0	ID=demo_B.t1.cds;Parent=demo_B.t1

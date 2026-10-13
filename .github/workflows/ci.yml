@@ -1,0 +1,27 @@
+name: Source checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Python sources
+        run: python -m compileall -q lib scripts tests examples
+      - name: Regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Shell syntax
+        run: |
+          for script in bin/* scripts/*.sh lib/*.sh examples/demo/*.sh; do
+            bash -n "$script"
+          done
+      - name: CLI metadata
+        run: |
+          bash bin/easypseudogene --version
+          bash bin/easypseudogene --help >/dev/null

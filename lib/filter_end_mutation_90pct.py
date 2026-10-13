@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from alignment_metrics import mutation_query_fraction
 
 
 def parse_alignment(path):
@@ -35,19 +36,18 @@ def main():
     with open(args.out_list, "w") as outp, open(args.out_report, "w") as rep:
         rep.write("query\tmut_pos\tquery_len\tfraction\n")
         for qid, (qseq, tseq) in records.items():
-            qlen = len(qseq)
-            if qlen == 0:
-                continue
             pos_x = tseq.find("X")
             pos_bang = tseq.find("!")
             positions = [p for p in (pos_x, pos_bang) if p >= 0]
             if not positions:
                 continue
             pos = min(positions)
-            frac = (pos + 1) / qlen
+            frac, covered, qlen = mutation_query_fraction(qseq, tseq, pos)
+            if not qlen:
+                continue
             if frac >= args.min_frac:
                 outp.write(f"{qid}\n")
-                rep.write(f"{qid}\t{pos+1}\t{qlen}\t{frac:.4f}\n")
+                rep.write(f"{qid}\t{covered}\t{qlen}\t{frac:.4f}\n")
 
 
 if __name__ == "__main__":

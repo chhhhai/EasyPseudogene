@@ -12,7 +12,6 @@ Usage:
 import argparse
 import re
 import sys
-from collections import defaultdict
 from html import escape
 
 
@@ -182,7 +181,7 @@ def format_alignment_html(query_seq, target_seq, mutations, max_width=80):
         
         # Format query sequence
         html_parts.append('<div class="alignment-block">')
-        html_parts.append(f'<div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">')
+        html_parts.append('<div class="seq-line"><span class="seq-label">Query:</span> <span class="seq-query">')
         
         for i, char in enumerate(q_chunk):
             pos = start + i + 1
@@ -1004,7 +1003,7 @@ Examples:
     print(f"Found {len(results)} pseudogene results", file=sys.stderr)
     
     if args.pseudogene_list:
-        print(f"Filtering by pseudogene list...", file=sys.stderr)
+        print("Filtering by pseudogene list...", file=sys.stderr)
         results = filter_by_list(results, args.pseudogene_list)
         print(f"After filtering: {len(results)} pseudogenes", file=sys.stderr)
     

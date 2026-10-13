@@ -1,0 +1,34 @@
+{
+  "origin": "Synthetic; generated with Python standard library",
+  "seed": 20261013,
+  "protein_length_aa": 300,
+  "mutations": {
+    "query": "demo_A.t1",
+    "stop_codon_aa1": 140,
+    "deleted_base_in_coding_sequence0": 646
+  },
+  "cross": {
+    "disrupted_query": "demo_A.t1",
+    "disrupted_contig": "cross_disrupted_A",
+    "intact_query": "demo_B.t1",
+    "intact_contig": "cross_intact_B"
+  },
+  "self": {
+    "annotated_queries": [
+      "demo_A.t1",
+      "demo_B.t1"
+    ],
+    "unannotated_disrupted_contig": "self_disrupted_A",
+    "note": "An intact annotated copy of demo_A.t1 is present; standard copy filters can exclude its disrupted duplicate."
+  },
+  "genome_bases": {
+    "cross": 4205,
+    "self": 6308
+  },
+  "files": {
+    "proteins.fa": "54d327ad9651e0a1bba75dad35cb83f8c2f7c511efb7baad182eb49f07e7a3ac",
+    "cross_genome.fa": "023084d67e1797407a2c793b07d0b4a64da6bb584fd23174d2ea9246b8652684",
+    "self_genome.fa": "ccbf7800dce2edfbff7aaf6ed4d125288e5653bc2237d172f5029d0d601eb4ed",
+    "self_annotation.gff3": "5609768b40fdbf0c17928f23e1c21773226f774d99b38ecf87862581bc31f846"
+  }
+}

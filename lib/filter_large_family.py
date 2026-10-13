@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import csv
 import re
 import sys
 
@@ -40,10 +41,21 @@ def main():
     ap.add_argument("--out-report", required=True)
     ap.add_argument("--patterns", required=True)
     ap.add_argument("--desc", default="")
+    ap.add_argument("--annotations", default="", help="TSV keyed by query_id with gene_symbol and gene_biotype")
+    ap.add_argument("--locus-map", default="", help="Map locus protein IDs to reference query IDs")
     args = ap.parse_args()
 
     patterns = parse_patterns(args.patterns)
     desc_map = parse_desc(args.desc)
+    annotations = {}
+    if args.annotations:
+        with open(args.annotations, newline="") as handle:
+            annotations = {row["query_id"]: row for row in csv.DictReader(handle, delimiter="\t")}
+    locus_query = {}
+    if args.locus_map:
+        with open(args.locus_map, newline="") as handle:
+            locus_query = {row["locus_id"]: row["query_id"]
+                           for row in csv.DictReader(handle, delimiter="\t")}
 
     def match_any(text):
         if not text:
@@ -63,13 +75,14 @@ def main():
                 header = line[1:].strip()
                 parts = header.split()
                 tid = parts[0]
-                gene_id = ""
-                gene_symbol = ""
+                annotation = annotations.get(locus_query.get(tid, tid), {})
+                gene_id = annotation.get("gene_id", "")
+                gene_symbol = annotation.get("gene_symbol", "")
                 for tok in parts[1:]:
-                    if tok.startswith("gene="):
-                        gene_id = tok.split("=", 1)[1]
-                    elif tok.startswith("gene_symbol="):
-                        gene_symbol = tok.split("=", 1)[1]
+                    if tok.startswith(("gene=", "gene:", "gene_id=", "gene_id:")) and not gene_id:
+                        gene_id = re.split("[=:]", tok, maxsplit=1)[1]
+                    elif tok.startswith(("gene_symbol=", "gene_symbol:")) and not gene_symbol:
+                        gene_symbol = re.split("[=:]", tok, maxsplit=1)[1]
 
                 matched = None
                 source = ""
@@ -81,11 +94,7 @@ def main():
                     if matched:
                         source = "gene_id"
                     else:
-                        desc = ""
-                        if gene_id in desc_map:
-                            desc = desc_map.get(gene_id, "")
-                        elif gene_symbol in desc_map:
-                            desc = desc_map.get(gene_symbol, "")
+                        desc = desc_map.get(gene_id, desc_map.get(gene_symbol, ""))
                         matched = match_any(desc)
                         if matched:
                             source = "description"

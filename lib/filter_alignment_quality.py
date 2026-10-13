@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from alignment_metrics import aligned_query_length, query_coverage, sequence_identity
 
 
 def parse_fasta_lengths(path):
@@ -43,12 +44,7 @@ def parse_alignment(path):
 
 
 def identity(a, b):
-    if not a or not b:
-        return 0.0
-    L = min(len(a), len(b))
-    if L == 0:
-        return 0.0
-    return sum(1 for i in range(L) if a[i] == b[i]) / L
+    return sequence_identity(a, b)
 
 
 def main():
@@ -78,9 +74,9 @@ def main():
         rep.write("transcript_id\talign_len\tprotein_len\tcoverage\tidentity\tstatus\n")
         for tid in ids:
             q, t = aln.get(tid, ("", ""))
-            aln_len = min(len(q), len(t))
+            aln_len = aligned_query_length(q, t)
             prot_len = lengths.get(tid, 0)
-            cov = aln_len / max(1, prot_len) if prot_len else 0.0
+            cov = query_coverage(q, t, prot_len)
             ident = identity(q, t) if aln_len else 0.0
             if aln_len >= args.min_aln_len and cov >= args.min_cov and ident >= args.min_id:
                 outp.write(f"{tid}\n")

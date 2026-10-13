@@ -1,312 +1,327 @@
 # EasyPseudogene
 
-EasyPseudogene is an automated pipeline for identifying pseudogenes in target genomes by comparing them with reference protein sequences. The pipeline uses mmseqs2, miniprot, and GeneWise to detect genes with premature stop codons and/or frameshifts.
+**Pseudogene candidate discovery with two comparison modes: Cross and Self.**
+
+EasyPseudogene compares protein sequences with a target genome, identifies
+premature stops and frameshifts, and reports candidates together with their
+sequence evidence and filtering decisions. The standard workflow uses
+miniprot and GeneWise.
+
+> Version: **1.1.0**. Use this documentation with the matching
+> source checkout; earlier versions have different commands and output layouts.
+
+## Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Installation demo](#installation-demo)
+- [Quick start](#quick-start)
+- [Example: human proteins against a dolphin genome](#example-human-proteins-against-a-dolphin-genome)
+- [Input requirements](#input-requirements)
+- [Outputs](#outputs)
+- [Workflow and interpretation](#workflow-and-interpretation)
+- [Validation](#validation)
+- [Documentation](#documentation)
+- [Citation, license and support](#citation-license-and-support)
 
 ## Features
 
-- **Automated Pipeline**: Single command to run the entire pseudogene identification process
-- **Comprehensive Filtering**: Multiple filtering steps to remove false positives
-- **Flexible Configuration**: Customizable filtering parameters via config file
-- **Whitelist Support**: Preserve known reference pseudogenes through all filtering stages
-- **High Recall**: Achieves >90% recall on reference datasets
+- **Cross:** search a target genome using reference proteins from another species.
+- **Self:** search a genome using its own proteins and matching annotation.
+- **Generic inputs:** plain/gzip FASTA and GTF/GFF3, including BRAKER-style
+  coding models and MAKER-style relationships.
+- **Traceable results:** retain query IDs, map queries to candidate loci, and
+  record input exclusions, filter outcomes and effective parameters.
+- **Structured outputs:** candidate TSV/BED/GFF3, an offline summary report,
+  input QC and reproducible run metadata.
 
-## Requirements
+## Installation
 
-### Dependencies
-
-- **mmseqs2**: Fast protein sequence searching
-- **miniprot**: Spliced protein-to-genome alignment
-- **GeneWise**: Gene prediction and disruption detection
-- **samtools**: FASTA indexing and extraction
-- **Python 3**: All filtering scripts
-- **Standard Unix tools**: awk, sort, comm, bash
-
-### Installation
-
-1. Install dependencies:
-   ```bash
-   # mmseqs2
-   conda install -c bioconda mmseqs2
-   
-   # miniprot
-   conda install -c bioconda miniprot
-   
-   # samtools
-   conda install -c bioconda samtools
-   
-   # GeneWise
-   conda install -c bioconda wise2
-   ```
-
-2. Install EasyPseudogene:
-   ```bash
-   cd EasyPseudogene
-   chmod +x bin/easypseudogene
-   chmod +x scripts/*.sh
-   ```
-
-3. Add to PATH (optional):
-   ```bash
-   export PATH=$PATH:$(pwd)/bin
-   ```
-
-## Usage
-
-### Basic Usage
+On Linux, clone the repository and create the standard Conda environment:
 
 ```bash
-easypseudogene \
+git clone https://github.com/chhhhai/EasyPseudogene.git
+cd EasyPseudogene
+conda env create -f environment.yml
+conda activate easypseudogene
+export PATH="$PWD/bin:$PATH"
+```
+
+The entry point can also be run as `bash bin/easypseudogene` from the checkout.
+Bash and standard Unix utilities, including `flock`, must be available.
+GeneWise is located through `PATH`, then the active Conda environment's `bin`
+directory. Its configuration is detected from the binary installation prefix,
+symlink target, active Conda environment and common system locations.
+For a custom installation, keep these explicit overrides:
+
+```bash
+easypseudogene --mode cross --proteins proteins.fa --genome genome.fa \
+  --threads 96 --wiseconfig /path/to/wisecfg \
+  --wisepath /path/to/genewise/bin --output cross_run
+```
+
+`--wisepath` locates the executable; `--wiseconfig` locates its data files.
+Configuration checks happen before analysis and report missing files explicitly.
+Further setup and optional dependencies are covered in [INSTALL.md](docs/INSTALL.md).
+`gffread` is only needed when translating an annotated reference genome.
+
+## Installation demo
+
+After activating your environment, run this from the source checkout:
+
+```bash
+bash examples/demo/run_demo.sh
+```
+
+The bundled synthetic dataset has two proteins and approximately 10.5 kb of
+genome sequence across the two modes. It runs Cross and Self with two threads,
+checks the expected candidates, TSV/BED/GFF3 coordinates and report links, and
+prints **`DEMO PASS`** on success. No sequence downloads or GeneWise path flags
+are needed for a standard installation.
+
+Open `demo_output/cross/report.html` and `demo_output/self/report.html`. Use a
+fresh output directory for another run, for example
+`bash examples/demo/run_demo.sh demo_output_2`. This checks installation and
+execution, not biological accuracy. See [Demo details](examples/demo/README.md).
+
+## Quick start
+
+### Cross: another species' proteins against the target genome
+
+```bash
+easypseudogene --mode cross \
   --proteins reference.proteins.fa \
   --genome target.genome.fa \
-  --threads 96 \
-  --visualize
+  --reference-annotation reference.gff3 \
+  --species cross_analysis --threads 16 --output cross_run
 ```
 
-### With Whitelist
+`--reference-annotation` is optional when proteins are supplied. Provide it
+when available to support reference annotation filters and neighborhood evidence.
+
+### Self: proteins against their own genome
 
 ```bash
-easypseudogene \
-  --proteins reference.proteins.fa \
-  --genome target.genome.fa \
-  --threads 96 \
-  --whitelist known_pseudogenes.txt \
-  --visualize
+easypseudogene --mode self \
+  --proteins species.proteins.fa \
+  --genome species.genome.fa \
+  --gff species.annotation.gff3 \
+  --max-hits-per-protein 20 --miniprot-outs 0.1 \
+  --species self_analysis --threads 16 --output self_run
 ```
 
-### With Custom Configuration
+This example retains additional hits so the query's annotated gene does not
+occupy the only selected hit. The historical defaults remain one selected hit
+per query and `--miniprot-outs 0.99`; they can miss off-annotation homologs in
+Self mode. Broader settings increase downstream work.
+
+### Check inputs before starting an analysis
+
+Append `--check-inputs` to either command. Preparation reports are written to
+`OUTPUT/NAME/work/input_check/inputs/`; no search or GeneWise analysis is started.
+Run again without the flag to analyze the same inputs.
+
+Threads are optional: the default is at most 16, limited by CPU affinity and
+recognized scheduler allocations. Use `--help` for common options and
+`--help-advanced` for additional controls.
+
+## Example: human proteins against a dolphin genome
+
+This Cross example uses [Ensembl release 115 human sequences](https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/)
+and the [NCBI dolphin assembly GCF_011762595.2](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_011762595.2/).
+Run the commands from the EasyPseudogene source checkout, with the standard
+dependencies installed and `easypseudogene` available on `PATH`.
 
 ```bash
-easypseudogene \
-  --proteins reference.proteins.fa \
-  --genome target.genome.fa \
-  --threads 96 \
-  --config config/custom.conf
-```
+epg_source="$PWD"
+mkdir -p human_dolphin_example
+cd human_dolphin_example
 
-### With Visualization
+# Download and decompress the reference proteins and CDS.
+ensembl_base=https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens
+wget -O human.pep.fa.gz \
+  "$ensembl_base/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
+wget -O human.cds.fa.gz \
+  "$ensembl_base/cds/Homo_sapiens.GRCh38.cds.all.fa.gz"
+gzip -dc human.pep.fa.gz > human.pep.fa
+gzip -dc human.cds.fa.gz > human.cds.fa
 
-```bash
-easypseudogene \
-  --proteins reference.proteins.fa \
-  --genome target.genome.fa \
-  --threads 96 \
-  --visualize
-```
+# Select one protein per gene, using the longest CDS with a matching protein.
+python "$epg_source/examples/ensembl_select_longest_cds_then_protein.py" \
+  --cds human.cds.fa --pep human.pep.fa --out-prefix human
 
-### Advanced Options
+# Download and decompress the target genome.
+ncbi_base=https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/011/762/595
+assembly=GCF_011762595.2_mTurTru1.mat.Y
+wget -O dolphin.fa.gz "$ncbi_base/$assembly/${assembly}_genomic.fna.gz"
+gzip -dc dolphin.fa.gz > dolphin.fa
 
-```bash
-easypseudogene \
-  --proteins reference.proteins.fa \
-  --genome target.genome.fa \
-  --threads 96 \
-  --species dolphin \
-  --output ./results \
-  --wiseconfig /path/to/wisecfg \
-  --wisepath /path/to/genewise/bin \
-  --whitelist ref_list.txt \
-  --visualize
-```
-
-## Input Files
-
-### Required
-
-- **--proteins**: Reference protein FASTA file
-  - Format: Standard FASTA with protein sequences
-  - Headers should contain transcript IDs (e.g., `>ENST00000123456.1`)
-
-- **--genome**: Target genome FASTA file
-  - Format: Standard FASTA with genomic sequences
-  - Can be multi-chromosome or single sequence
-
-- **--threads**: Number of threads to use
-  - Recommended: 32-128 depending on system
-
-### Optional
-
-- **--whitelist**: File with reference transcript IDs (one per line)
-  - These transcripts will be preserved through all filtering stages
-  - Useful for maintaining high recall on known pseudogenes
-
-## Output
-
-The pipeline creates the following directory structure:
-
-```
-output_dir/
-└── species_name/
-    ├── mmseqs/              # mmseqs2 search results
-    ├── miniprot/            # miniprot alignment results
-    ├── regions/             # Extracted genomic regions
-    ├── genewise/            # GeneWise predictions
-    └── post_genewise_filter/ # Filtered results
-        ├── putative_pseudogene_ids.txt
-        ├── unitary_pseudogene_ids.txt
-        ├── high_conf_final_pseudogene_ids.txt
-        ├── high_confidence_pseudogene_ids.txt   # Final high-confidence results
-```
-
-### Key Output Files
-
-- **high_confidence_pseudogene_ids.txt**: Final high-confidence pseudogenes (recommended for downstream analysis)
-- **putative_pseudogene_ids.txt**: All putative pseudogenes before filtering
-- **multi_mutation_for_manual_review.txt**: Candidates with multiple disruptions requiring manual review
-- **genewise_visualization.html**: Interactive HTML visualization (if --visualize option used)
-
-## Configuration
-
-Edit `config/default.conf` to customize filtering parameters:
-
-```bash
-# Disable family filter
-ENABLE_FAMILY_FILTER=0
-
-# Adjust global alignment quality thresholds
-GLOBAL_MIN_COV=0.8
-GLOBAL_MIN_ID=0.4
-GLOBAL_MIN_ALN_LEN=250
-```
-
-## Pipeline Steps
-
-1. **Pre-GeneWise Screening** (mmseqs2 + miniprot)
-   - Fast protein-to-genome mapping
-   - Spliced alignment identification
-   - Candidate region extraction
-
-2. **GeneWise Analysis**
-   - Gene prediction on candidate regions
-   - Detection of stop codons and frameshifts
-
-3. **Post-GeneWise Filtering**
-   - Prefilter: Keep only transcripts with gene_symbol
-   - Unitary filters: Remove large families, predicted genes, redundancy
-   - False-positive filters: Remove low-quality alignments
-   - Quality filters: Multi-disruption and global alignment quality
-
-## Examples
-
-### Example : Basic Run (Take the comparison between humans and cetaceans as an example)
-
-```bash
-# extract ensembl human longest pep
-wget https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz
-
-wget https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz
-
-python ./examples/ensembl_select_longest_cds_then_protein.py --cds ./Homo_sapiens.GRCh38.cds.all.fa --pep ./Homo_sapiens.GRCh38.pep.all.fa  --out-prefix human # human.longest_cds.proteins.fa
-
-wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/011/762/595/GCF_011762595.2_mTurTru1.mat.Y/GCF_011762595.2_mTurTru1.mat.Y_genomic.fna.gz
-
-mv GCF_011762595.2_mTurTru1.mat.Y_genomic.fna dolphin.fa
-
-easypseudogene \
+easypseudogene --mode cross \
   --proteins human.longest_cds.proteins.fa \
   --genome dolphin.fa \
-  --threads 96 \
-  --output result \
-  --visualize
+  --species human_dolphin --threads 96 \
+  --output result --visualize
 ```
 
-### 
+Adjust `--threads` to your available resources. The selector also writes
+`human.longest_cds.tsv`, recording the selected gene, transcript and protein IDs.
+Reference annotation is optional for this protein-based Cross run; without it,
+annotation-dependent filters and reference-neighborhood evidence are unavailable.
 
-## Troubleshooting
+Open `result/human_dolphin/report.html` for the summary. When GeneWise output is
+nonempty, `--visualize` also produces
+`result/human_dolphin/results/genewise_alignment.html`. Final candidates are in
+`result/human_dolphin/results/final_loci.tsv`.
+This is a full-data usage example, not a validated biological benchmark; it has
+not been rerun for this documentation revision.
 
-### GeneWise Not Found
+## Input requirements
 
-If GeneWise is not in PATH, specify paths:
+| Input | Cross | Self | Accepted format |
+| --- | --- | --- | --- |
+| Target genome | Required | Required | DNA FASTA, plain or gzip |
+| Protein sequences | Required, or generated from an annotated reference genome | Required | Unaligned protein FASTA, plain or gzip |
+| Reference annotation | Optional with proteins; required for reference-genome translation | Not used | GTF/GFF3, plain or gzip |
+| Target annotation | Not required for standard Cross | Required | GTF/GFF3, plain or gzip |
+| Explicit ID mapping | Optional | Optional | TSV via `--protein-id-map` |
+
+### FASTA and annotation rules
+
+- Use unique first-token FASTA IDs. Ensembl names and `gene_symbol` fields
+  are not required.
+- Self annotation and genome must come from the same assembly, with matching
+  contig IDs and valid coordinates. Reference-genome translation has the same
+  requirement for its reference files.
+- Coding models should identify transcripts/proteins and their genes through
+  GFF3 `ID`/`Parent`, GTF `gene_id`/`transcript_id`, or explicit protein IDs.
+  Missing containers can be inferred from supported coding relationships.
+- Keep protein IDs associated with their annotation. For renamed IDs, provide
+  an explicit mapping; inspect unresolved associations in the mapping report.
+- Terminal protein `*` markers are removed. Empty sequences, internal stops
+  and invalid amino-acid symbols are excluded and reported by default.
+  `--invalid-proteins error` selects strict rejection; duplicate IDs fail.
+
+For example, a BRAKER reference can be supplied directly:
 
 ```bash
-easypseudogene \
-  --proteins proteins.fa \
-  --genome genome.fa \
-  --threads 96 \
-  --wiseconfig /path/to/wisecfg \
-  --wisepath /path/to/genewise/bin
+easypseudogene --mode cross --proteins braker.aa \
+  --reference-annotation braker.gtf --genome target.fa \
+  --species braker_cross --output cross_run
 ```
 
-### Low Memory
-
-Reduce threads or adjust mmseqs2 parameters:
+Reference-genome translation is an alternative Cross input route:
 
 ```bash
-THREADS=32 MMSEQS_MAX_SEQS=3 easypseudogene \
-  --proteins proteins.fa \
-  --genome genome.fa \
-  --threads 32
+easypseudogene --mode cross --reference-genome reference.fa \
+  --reference-annotation reference.gff3 --genome target.fa \
+  --species genome_cross --output cross_run
 ```
 
-### Skip Steps
+Use either `--proteins` or `--reference-genome`. Translation uses gffread and
+selects one valid longest representative protein per gene.
 
-Skip GeneWise if already run:
+## Outputs
 
-```bash
-easypseudogene \
-  --proteins proteins.fa \
-  --genome genome.fa \
-  --threads 96 \
-  --skip-genewise
+Open `report.html` first, then inspect `results/final_loci.tsv`.
+
+```text
+OUTPUT/NAME/
+├── report.html
+├── results/
+│   ├── final_loci.tsv
+│   ├── final_loci.bed
+│   ├── final_loci.gff3
+│   ├── final_queries.txt
+│   ├── loci.tsv
+│   ├── queries.tsv
+│   └── summary.json
+├── qc/
+├── metadata/
+├── logs/
+└── work/
 ```
 
-## Visualization
+| File | Purpose |
+| --- | --- |
+| `report.html` | Offline summary, stage counts, evidence grades and file links |
+| `results/final_loci.tsv` | Final computational candidates and evidence fields |
+| `results/final_loci.bed` / `.gff3` | Final candidate coordinates |
+| `results/loci.tsv` | All selected loci, decisions and exclusion reasons |
+| `results/queries.tsv` | Every accepted input query, including queries without selected loci |
+| `qc/input_qc.json` | Input preparation status and statistics |
+| `qc/protein_exclusions.tsv` | Invalid reference proteins excluded during preparation |
+| `qc/nonfinal_loci.tsv` | Loci outside the final candidate set |
+| `metadata/run_manifest.json` | Version, workflow, file paths and counts |
+| `metadata/reference_cache.json` | Input, code, tool and artifact fingerprints |
+| `logs/run.log` | Analysis log |
+| `work/` | Staged inputs and intermediates for the stages actually used |
 
-EasyPseudogene includes an interactive HTML visualization tool to explore GeneWise results.
+TSV/BED intervals are **0-based, half-open**; GFF3 intervals are **1-based,
+inclusive**. The final GFF3 contains one candidate interval feature per locus.
+Optional evidence tables may also appear.
 
-### Generate Visualization After Pipeline
+Use a fresh output directory after changing code, inputs or parameters.
+A verified complete run can be reused without rewriting its published results;
+incomplete, modified or incompatible runs are refused. Zero candidates is a
+valid completed result.
 
-Add `--visualize` flag to automatically generate visualization:
+## Workflow and interpretation
 
-```bash
-easypseudogene \
-  --proteins human.proteins.fa \
-  --genome dolphin.fa \
-  --threads 96 \
-  --visualize
-```
+The standard workflow follows this order:
 
-### Standalone Visualization
+1. Normalize inputs and check associations.
+2. Run miniprot and select candidate hits.
+3. In Self mode, filter hits overlapping the query's own or annotated loci.
+4. Prepare per-locus jobs, extract DNA and run GeneWise.
+5. Count stops/frameshifts, select representative proteins, and apply the
+   enabled family, annotation, copy and alignment-quality filters.
+6. In Cross mode, check same-locus intact-alignment conflicts and assess
+   reference neighborhoods when the corresponding inputs are available.
+7. Publish candidates, QC, metadata and the summary report.
 
-Use the standalone visualization tool on existing results:
+The standard copy filters can remove a disrupted locus when another
+full-length homolog exists. This behavior can exclude duplicated pseudogene
+candidates; its conditions and alternative workflows are described in
+[Methods](docs/METHODS.md) and [Advanced usage](docs/ADVANCED_USAGE.md).
 
-```bash
-easypseudogene-visualize \
-  --genewise output/dolphin/genewise/pseudogene-genewise.txt \
-  --output visualization.html
-```
+Results use `high`, `medium`, `low` and `unassessed` **sequence-evidence grades**.
+Grades are separate from filter decisions and are not calibrated probabilities
+of true pseudogene status. Missing measurements remain explicit. Final
+candidates require biological review; RELAX is outside the core workflow.
 
-Or auto-detect from results directory:
+## Validation
 
-```bash
-easypseudogene-visualize \
-  --species dolphin \
-  --results-dir ./easypseudogene_output \
-  --output visualization.html
-```
+The frozen **3.0.10-dev** checkout passed **93 regression tests and 20 runtime
+checks**. Real BRAKER data checks included:
 
-### Visualization Features
+- Complete input preparation for 20,669 T. rubra and 30,536 T. dohrnii protein
+  records; one invalid T. rubra protein was explicitly excluded.
+- Cross analysis of 200 reference genes against the whole target genome.
+- Self analysis of 40 original proteins, with subset and whole-genome targets.
+- Output directories, report links, GFF3/TSV/BED equivalence, empty results,
+  reference translation and cache protection.
 
-The HTML report includes:
-- **Statistics Dashboard**: Overview of total pseudogenes, mutation types, and scores
-- **Interactive Search**: Filter pseudogenes by transcript ID
-- **Detailed Alignments**: View query vs target protein alignments with highlighted mutations
-- **Mutation Highlights**: Stop codons and frameshifts are color-coded in the alignment
-- **Mutation Summary**: List of all mutations per pseudogene
+These checks establish execution and output consistency within that scope.
+They do not establish a general biological precision or recall value.
+The pre-release **3.0.11-dev** runtime code underlying **1.1.0** passed **98 regression tests** and the
+bundled synthetic Cross/Self installation demo, using automatic GeneWise
+discovery in an existing Conda installation. This revision has not had a new
+full BRAKER discovery validation. See [Validation details](docs/VALIDATION.md).
 
-Open the generated HTML file in any web browser to explore the results interactively.
+## Documentation
 
-## Citation
+- [Quick start](docs/QUICKSTART.md)
+- [Installation and dependencies](docs/INSTALL.md)
+- [Methods and filtering rules](docs/METHODS.md)
+- [Advanced workflows and configuration](docs/ADVANCED_USAGE.md)
+- [Validation scope and limitations](docs/VALIDATION.md)
+- [Version history](docs/CHANGELOG.md)
 
-If you use EasyPseudogene in your research, please cite:
+## Citation, license and support
 
-- mmseqs2: Steinegger & Söding (2017) Nature Biotechnology
-- miniprot: Li (2023) Bioinformatics
-- GeneWise: Birney et al. (2004) Genome Research
+Record the EasyPseudogene version, input assemblies and effective parameters
+in your methods. Cite the tools actually used:
 
-## License
-
-This software is provided as-is for research purposes.
-
-## Support
-
-For issues and questions, please check the documentation or contact the developers.
+- miniprot: Li (2023), *Bioinformatics*.
+- GeneWise: Birney et al. (2004), *Genome Research*.
+- MMseqs2, when used: Steinegger and Söding (2017), *Nature Biotechnology*.

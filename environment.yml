@@ -1,0 +1,10 @@
+name: easypseudogene
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - miniprot
+  - wise2
+  - samtools
+  - gffread

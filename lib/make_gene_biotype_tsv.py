@@ -30,11 +30,13 @@ def main():
     args = ap.parse_args()
 
     query = build_query(args.dataset)
+    if urllib.parse.urlparse(args.mart_url).scheme != 'https':
+        raise SystemExit('only HTTPS BioMart URLs are permitted')
     data = urllib.parse.urlencode({"query": query}).encode("utf-8")
 
     req = urllib.request.Request(args.mart_url, data=data, method="POST")
     try:
-        with urllib.request.urlopen(req) as resp, open(args.out, "wb") as out:
+        with urllib.request.urlopen(req) as resp, open(args.out, "wb") as out:  # nosec B310
             out.write(resp.read())
     except Exception as e:
         sys.stderr.write(f"ERROR: failed to download BioMart data: {e}\n")

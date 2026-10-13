@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Prefilter protein FASTA:
-1. Only keep transcripts with a non-empty gene_symbol
-2. If multiple transcripts share the same gene_symbol, keep only the longest one
+1. Accept plain FASTA IDs and prefer gene IDs over display symbols
+2. If multiple transcripts share the same gene identifier, keep only the longest one
 """
 import argparse
 import re
@@ -14,10 +14,11 @@ def parse_header(header):
     # >ENST00000622028.1 gene=ENSG00000277282.1 ensp=ENSP00000481738.1 gene_symbol=IGHV1OR21-1 cds_len=353 pep_len=117
     tid = header.split()[0].lstrip(">")
     
-    m = re.search(r"gene_symbol=(\S+)", header)
-    gene_symbol = m.group(1) if m else ""
-    
-    return tid, gene_symbol
+    for key in ("gene", "gene_id", "locus_tag", "gene_symbol"):
+        m = re.search(r"(?:^|\s)" + key + r"[=:](\S+)", header)
+        if m and m.group(1) not in {"NA", "N/A", ".", "-"}:
+            return tid, key + ":" + m.group(1)
+    return tid, "sequence:" + tid
 
 
 def read_fasta(fh):
@@ -38,7 +39,7 @@ def read_fasta(fh):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Prefilter proteins: keep only transcripts with gene_symbol, one per gene_symbol (longest).")
+    ap = argparse.ArgumentParser(description="Prefilter proteins: keep the longest transcript per gene ID/symbol, or each plain FASTA ID.")
     ap.add_argument("--input", "-i", required=True, help="Input protein FASTA")
     ap.add_argument("--output", "-o", required=True, help="Output filtered FASTA")
     ap.add_argument("--report", "-r", help="Optional TSV report of kept/skipped")

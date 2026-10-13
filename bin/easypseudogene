@@ -14,50 +14,478 @@ EASYPSEUDOGENE_DIR="$(cd "${EASYPSEUDOGENE_DIR}" && pwd)"
 LIB_DIR="${EASYPSEUDOGENE_DIR}/lib"
 CONFIG_DIR="${EASYPSEUDOGENE_DIR}/config"
 
+# Preserve the invocation for reproducible cache identity.
+ORIGINAL_ARGS=("$@")
+BLAST_JOBS_EXPLICIT=0
+BLAST_THREADS_EXPLICIT=0
+ENGINE_EXPLICIT=0
+CLI_THREADS=""
+
 # Default values
 THREADS=""
 PROTEINS=""
+REFERENCE_GENOME=""
 GENOME=""
 SPECIES=""
 OUTPUT_DIR=""
+MODE="cross"
+GFF=""
+MASK_FEATURES="gene,CDS"
+SELF_OVERLAP_CUTOFF="0.8"
+KEEP_PSEUDOGENE_ANNOTATIONS="0"
+PSEUDOGENE_OVERLAP_CUTOFF="0.1"
+ANNOTATED_OVERLAP_CUTOFF="0.8"
+SKIP_MMSEQS="1"
+MINIPROT_MAX_HITS="1"
+MINIPROT_OUTN="1000"
+MINIPROT_OUTS="0.99"
+FAST_CATALOG="0"
+REPEAT_BED=""
+SELF_CATALOG_SYNTENY_BED=""
+SELF_CATALOG_ENGINE="legacy"
+PRESET=""
+WORKFLOW_CLI=""
+SENSITIVITY_CLI=""
+CHECK_INPUTS=0
+INVALID_PROTEINS="skip"
+SELF_CATALOG_SCORE_CUTOFF="0"
+SELF_CATALOG_REQUIRE_EVIDENCE="0"
+SELF_CATALOG_CLUSTER_LOCI="0"
+SELF_CATALOG_CLUSTER_MAX_GAP="0"
+SELF_CATALOG_CLUSTER_COORDINATE_MODE="best"
+SELF_CATALOG_MAX_CDS_OVERLAP="1.01"
+SELF_CATALOG_BLAST6=""
+SELF_CATALOG_BLAST_PARALLEL_CHROMOSOMES="0"
+SELF_CATALOG_BLAST_JOBS="7"
+SELF_CATALOG_BLAST_THREADS_PER_JOB="8"
+SELF_CATALOG_BLAST_TASK="tblastn"
+SELF_CATALOG_BLAST_MASK_CDS="0"
+SELF_CATALOG_ENFORCE_QUERY_ORDER="0"
+SELF_CATALOG_SQLITE_STREAM="0"
+SELF_CATALOG_QUERY_ORDER_TOLERANCE_AA="20"
+SELF_CATALOG_CHAIN_MODE="proximity"
+SELF_CATALOG_DAG_MAX_QUERY_GAP="500"
+SELF_CATALOG_BLAST_MAX_EVALUE="0.1"
+SELF_CATALOG_BLAST_MIN_BITSCORE="40"
+SELF_CATALOG_BLAST_MIN_ALIGN_AA="30"
+SELF_CATALOG_BLAST_CLUSTER_GAP="1000"
+SELF_CATALOG_BLAST_MIN_CLUSTER_SCORE="50"
+SELF_CATALOG_SCORE_MODE="raw"
+SELF_CATALOG_OVERLAP_FILTER_BASIS="both"
+SELF_CATALOG_BLAST_MERGE_LOCI="0"
+SELF_CATALOG_BLAST_MERGE_GAP="0"
+SELF_CATALOG_BLAST_MERGE_SAME_STRAND="0"
+SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE="union"
+SELF_CATALOG_SOURCE_OVERLAP_CUTOFF="1.01"
+SELF_CATALOG_MAX_CANDIDATES_PER_QUERY="0"
+SELF_CATALOG_MAX_MERGED_SPAN="0"
+SELF_CATALOG_MMSEQS_SENSITIVITY="5.7"
+SELF_CATALOG_MMSEQS_MAX_SEQS="1000"
+SELF_CATALOG_MMSEQS_EVALUE="0.1"
+SELF_CATALOG_MMSEQS_TRANSLATION_MODE="0"
+SELF_CATALOG_MMSEQS_KEEP_LONGEST="0"
+SELF_CATALOG_MMSEQS_MASK_CDS="0"
+SELF_CATALOG_MMSEQS_REUSE_M8=""
+SELF_CATALOG_VALIDATE_DISRUPTIONS="0"
+SELF_CATALOG_VALIDATION_FLANK="500"
+UNITARY_CANDIDATES=""
+UNITARY_TARGET_PROTEINS=""
+UNITARY_TARGET_GENOME=""
+UNITARY_REUSE_TARGET_GENOME_PAF=""
+UNITARY_OUTGROUP_PROTEINS=""
+UNITARY_SYNTENY_BED=""
+UNITARY_REUSE_TARGET_M8=""
+UNITARY_REUSE_OUTGROUP_M8=""
+REFERENCE_ANNOTATION_TSV_CLI=""
+REFERENCE_GTF=""
+PROTEIN_ID_MAP=""
+REDUNDANCY_PAF=""
+COPY_SEARCH_SOURCE=""
+SYNTENY_TSV_CLI=""
 WISECONFIGDIR="${WISECONFIGDIR:-}"
 WISEPATH="${WISEPATH:-}"
 
 # Parse arguments
 usage() {
     cat <<EOF
+EasyPseudogene - two comparison modes, one result layout
+
+Usage: easypseudogene --mode cross|self --proteins FILE --genome FILE [OPTIONS]
+
+Inputs (plain or gzip):
+  --proteins FILE              Reference protein FASTA
+  --genome FILE                Target genome FASTA
+  --gff FILE                   Target GTF/GFF3; required for self
+  --reference-annotation FILE  Optional reference GTF/GFF3 for cross
+  --reference-genome FILE      Translate reference CDS instead of --proteins;
+                              requires --reference-annotation
+
+Run options:
+  --mode cross|self            Comparison mode [cross]
+  --workflow standard|fast     GeneWise workflow [standard]; fast is for self
+  --threads N                  CPU budget [auto: at most 16, respects allocation]
+  --output DIR                 Output directory [./easypseudogene_output]
+  --species NAME               Run name [derived from target filename]
+  --check-inputs               Prepare/check inputs only; do not search
+  --invalid-proteins skip|error Exclude invalid sequences with report [skip],
+                              or stop on the first invalid sequence
+  --protein-id-map FILE        Optional explicit protein/transcript/gene TSV
+  --help-advanced              Search engines, presets and expert options
+  --version                    Show version
+
+Results: OUTPUT/NAME/report.html and {results,qc,metadata}/
+Intermediate files: OUTPUT/NAME/work/; logs: OUTPUT/NAME/logs/
+Evidence levels describe sequence disruption support, not biological certainty.
+
+Examples:
+  easypseudogene --mode cross --proteins reference.aa --genome target.fa
+  easypseudogene --mode self --proteins proteins.aa --genome genome.fa --gff genes.gff3
+  easypseudogene --mode self --workflow fast --proteins proteins.aa --genome genome.fa --gff genes.gtf
+EOF
+}
+
+advanced_usage() {
+    cat <<EOF
 EasyPseudogene - Automated Pseudogene Identification Pipeline
 
 Usage: easypseudogene [OPTIONS]
 
-Required:
-  --proteins FILE       Reference protein FASTA file
+Required for cross/self comparison:
+  --proteins FILE       Protein FASTA (plain/gzip; BRAKER/MAKER transcript IDs accepted)
   --genome FILE         Target genome FASTA file
   --threads N           Number of threads
 
 Optional:
+  --workflow standard|fast  Simple workflow selector (fast: self MMseqs balanced)
+  --sensitivity balanced|sensitive  Search profile for --workflow fast [balanced]
+  --check-inputs         Only prepare/check inputs
+  --invalid-proteins skip|error  Report exclusions [skip] or reject bad sequences
+  --mode MODE           Comparison mode: cross (default) or self
+  --gff FILE            Target GTF/GFF3, plain/gzip (required for --mode self)
+  --target-annotation FILE  Alias for --gff
+  --mask-feature LIST   Comma-separated GFF feature types to mask in self mode (default: gene,CDS)
+  --self-overlap-cutoff FLOAT
+                        Remove hits overlapping inferred self locus by this fraction (default: 0.8)
+  --annotated-overlap-cutoff FLOAT
+                        Remove hits overlapping annotated loci by this fraction (default: 0.8)
+  --skip-mmseqs         Use miniprot directly (default in cross mode)
+  --diagnostic-mmseqs   Also run MMseqs for diagnostics; does not select miniprot inputs
+  --max-hits-per-protein N
+                        Keep top N miniprot hits per protein before filtering (default: 1)
+  --miniprot-outn N     Pass --outn to miniprot: max alignments output per query [1000]
+  --miniprot-outs FLOAT Pass --outs to miniprot: min score ratio to best hit [0.99]
+  --keep-pseudogene-annotations
+                        In self mode, retain hits overlapping pseudogene/pseudogenic GFF features
+  --pseudogene-overlap-cutoff FLOAT
+                        Overlap fraction to force-retain pseudogene annotations (default: 0.1)
+  --fast-catalog        Stop after miniprot/annotation filtering and output scored candidate TSV/GFF3 (no GeneWise)
+  --repeat-bed FILE     Optional RepeatMasker/repeat BED used for repeat-overlap scoring in --fast-catalog
+  --self-catalog-synteny-bed FILE  Optional synteny BED for duplicated-like evidence
+  --preset NAME          mmseqs-balanced, mmseqs-sensitive, tblastn-production-candidates-only, or tblastn-production-validated
+  --self-catalog-engine legacy|fast|blast-fast|mmseqs-fast
+                        For --mode self --fast-catalog, use legacy two-step engine or integrated fast engine [legacy]
+  --self-catalog-score-cutoff FLOAT
+                        Score cutoff for integrated fast self-catalog engine [0]
+  --self-catalog-require-evidence
+                        Integrated fast engine: require disruption/low-CDS/fragmentary evidence
+  --self-catalog-cluster-loci
+                        Integrated fast engine: cluster retained hits into locus-level candidates
+  --self-catalog-cluster-max-gap N
+                        Maximum bp gap for self-catalog locus clustering [0]
+  --self-catalog-cluster-coordinate-mode best|union
+                        Clustered locus coordinate mode [best]
+  --self-catalog-max-cds-overlap FLOAT
+                        Integrated fast engine: discard candidates above CDS overlap fraction [disabled]
+  --self-catalog-blast6 FILE
+  --self-catalog-blast-parallel-chromosomes
+  --self-catalog-blast-jobs INT
+  --self-catalog-blast-threads-per-job INT
+  --self-catalog-blast-task tblastn|tblastn-fast
+  --self-catalog-blast-mask-cds-before-search
+  --self-catalog-enforce-query-order
+  --self-catalog-chain-mode proximity|dag
+  --self-catalog-dag-max-query-gap INT
+  --self-catalog-sqlite-stream
+  --self-catalog-query-order-tolerance-aa INT
+                        tblastn BLAST6 input for --self-catalog-engine blast-fast
+  --self-catalog-blast-max-evalue FLOAT
+  --self-catalog-blast-min-bitscore FLOAT
+  --self-catalog-blast-min-align-aa INT
+  --self-catalog-blast-cluster-gap INT
+  --self-catalog-blast-min-cluster-score FLOAT
+  --self-catalog-score-mode raw|nonredundant
+  --self-catalog-overlap-filter-basis block|outer|both
+  --self-catalog-blast-merge-loci
+  --self-catalog-blast-merge-gap INT
+  --self-catalog-blast-merge-same-strand
+  --self-catalog-blast-merge-coordinate-mode union|best
+  --self-catalog-mmseqs-sensitivity FLOAT
+  --self-catalog-mmseqs-max-seqs INT
+  --self-catalog-mmseqs-evalue FLOAT
+  --self-catalog-mmseqs-translation-mode INT
+  --self-catalog-mmseqs-keep-longest
+  --self-catalog-mmseqs-mask-cds-before-search
+  --self-catalog-mmseqs-reuse-m8 FILE
+  --self-catalog-validate-disruptions
+  --self-catalog-validation-flank INT
+  --self-catalog-source-overlap-cutoff FLOAT
+  --self-catalog-max-candidates-per-query INT
+  --self-catalog-max-merged-span INT
   --species NAME        Species name (default: auto-detect from genome filename)
   --output DIR          Output directory (default: ./easypseudogene_output)
-  --wiseconfig DIR      WISECONFIGDIR for GeneWise (if not in PATH)
-  --wisepath DIR        PATH to GeneWise binaries (if not in PATH)
-  --whitelist FILE      Whitelist of reference transcript IDs (one per line)
+  --wiseconfig DIR      GeneWise configuration directory (auto-detected)
+  --wisepath DIR        Directory containing genewise (PATH/active Conda by default)
   --config FILE         Configuration file (default: config/default.conf)
+  --reference-annotations FILE  Reference query annotation TSV (gene names/biotypes)
+  --reference-annotation FILE  Matching reference GTF/GFF3 (plain/gzip); build annotation and neighborhood evidence
+  --reference-gtf FILE  Compatibility alias for --reference-annotation
+  --reference-genome FILE  Reference genome FASTA; translate its matching annotation into proteins
+  --protein-id-map FILE  Optional TSV: query_id, transcript_id and/or gene_id for custom ID associations
+  --redundancy-paf FILE  Additional miniprot genome hits for functional-copy screening
+  --synteny-tsv FILE    Independent target intervals; requires ENABLE_SYNTENY_FILTER=1
   --skip-genewise       Skip GeneWise step (use existing results)
   --skip-filter         Skip filtering step (use existing results)
   --visualize           Generate HTML visualization report after completion
   --help                Show this help message
 
 Examples:
-  easypseudogene --proteins human.proteins.fa --genome dolphin.fa --threads 96 --visualize
-  easypseudogene --proteins human.proteins.fa --genome dolphin.fa --threads 96 --whitelist ref_list.txt --visualize
+  easypseudogene --mode cross --proteins human.proteins.fa --genome dolphin.fa --threads 96
+  easypseudogene --mode self --proteins arabidopsis.fa --genome TAIR10.fa --gff TAIR10.gff3 --threads 32
+
+Additional unitary evidence for cross-species candidates:
+  easypseudogene-unitary --help
 
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --help|-h|--help-advanced|--version|--check-inputs|--fast-catalog|--skip-mmseqs|--diagnostic-mmseqs|--keep-pseudogene-annotations|--self-catalog-require-evidence|--self-catalog-cluster-loci|--self-catalog-blast-parallel-chromosomes|--self-catalog-blast-mask-cds-before-search|--self-catalog-enforce-query-order|--self-catalog-sqlite-stream|--self-catalog-blast-merge-loci|--self-catalog-blast-merge-same-strand|--self-catalog-mmseqs-keep-longest|--self-catalog-mmseqs-mask-cds-before-search|--self-catalog-validate-disruptions|--skip-genewise|--skip-filter|--visualize) ;;
+        --*) [[ $# -ge 2 && "$2" != --* ]] || { echo "ERROR: $1 requires a value; use --help" >&2; exit 1; } ;;
+    esac
     case $1 in
         --proteins)
             PROTEINS="$2"
+            shift 2
+            ;;
+        --reference-genome)
+            REFERENCE_GENOME="$2"; shift 2 ;;
+        --reference-annotations)
+            REFERENCE_ANNOTATION_TSV_CLI="$2"; shift 2 ;;
+        --reference-gtf|--reference-annotation)
+            [[ -z "${REFERENCE_GTF}" ]] || { echo "ERROR: specify reference annotation only once" >&2; exit 1; }
+            REFERENCE_GTF="$2"; shift 2 ;;
+        --protein-id-map)
+            PROTEIN_ID_MAP="$2"; shift 2 ;;
+        --redundancy-paf)
+            REDUNDANCY_PAF="$2"; shift 2 ;;
+        --synteny-tsv)
+            SYNTENY_TSV_CLI="$2"; shift 2 ;;
+        --mode)
+            MODE="$2"
+            shift 2
+            ;;
+        --workflow) WORKFLOW_CLI="$2"; shift 2 ;;
+        --sensitivity) SENSITIVITY_CLI="$2"; shift 2 ;;
+        --check-inputs) CHECK_INPUTS=1; shift ;;
+        --invalid-proteins) INVALID_PROTEINS="$2"; shift 2 ;;
+        --gff|--target-annotation)
+            GFF="$2"
+            shift 2
+            ;;
+        --mask-feature|--mask-features)
+            MASK_FEATURES="$2"
+            shift 2
+            ;;
+        --self-overlap-cutoff)
+            SELF_OVERLAP_CUTOFF="$2"
+            shift 2
+            ;;
+        --annotated-overlap-cutoff)
+            ANNOTATED_OVERLAP_CUTOFF="$2"
+            shift 2
+            ;;
+        --keep-pseudogene-annotations)
+            KEEP_PSEUDOGENE_ANNOTATIONS=1
+            shift
+            ;;
+        --pseudogene-overlap-cutoff)
+            PSEUDOGENE_OVERLAP_CUTOFF="$2"
+            shift 2
+            ;;
+        --diagnostic-mmseqs)
+            SKIP_MMSEQS="0"; shift ;;
+        --skip-mmseqs)
+            SKIP_MMSEQS=1
+            shift
+            ;;
+        --max-hits-per-protein)
+            MINIPROT_MAX_HITS="$2"
+            shift 2
+            ;;
+        --miniprot-outn)
+            MINIPROT_OUTN="$2"
+            shift 2
+            ;;
+        --miniprot-outs)
+            MINIPROT_OUTS="$2"
+            shift 2
+            ;;
+        --fast-catalog)
+            FAST_CATALOG=1
+            shift
+            ;;
+        --repeat-bed)
+            REPEAT_BED="$2"
+            shift 2
+            ;;
+        --self-catalog-synteny-bed)
+            SELF_CATALOG_SYNTENY_BED="$2"
+            shift 2
+            ;;
+        --preset)
+            PRESET="$2"
+            shift 2
+            ;;
+        --self-catalog-engine)
+            SELF_CATALOG_ENGINE="$2"
+            ENGINE_EXPLICIT=1
+            shift 2
+            ;;
+        --self-catalog-score-cutoff)
+            SELF_CATALOG_SCORE_CUTOFF="$2"
+            shift 2
+            ;;
+        --self-catalog-require-evidence)
+            SELF_CATALOG_REQUIRE_EVIDENCE=1
+            shift
+            ;;
+        --self-catalog-cluster-loci)
+            SELF_CATALOG_CLUSTER_LOCI=1
+            shift
+            ;;
+        --self-catalog-cluster-max-gap)
+            SELF_CATALOG_CLUSTER_MAX_GAP="$2"
+            shift 2
+            ;;
+        --self-catalog-cluster-coordinate-mode)
+            SELF_CATALOG_CLUSTER_COORDINATE_MODE="$2"
+            shift 2
+            ;;
+        --self-catalog-max-cds-overlap)
+            SELF_CATALOG_MAX_CDS_OVERLAP="$2"
+            shift 2
+            ;;
+        --self-catalog-blast6)
+            SELF_CATALOG_BLAST6="$2"
+            shift 2
+            ;;
+        --self-catalog-blast-parallel-chromosomes)
+            SELF_CATALOG_BLAST_PARALLEL_CHROMOSOMES="1"; shift ;;
+        --self-catalog-blast-jobs)
+            SELF_CATALOG_BLAST_JOBS="$2"; CLI_BLAST_JOBS="$2"; BLAST_JOBS_EXPLICIT=1; shift 2 ;;
+        --self-catalog-blast-threads-per-job)
+            SELF_CATALOG_BLAST_THREADS_PER_JOB="$2"; CLI_BLAST_THREADS="$2"; BLAST_THREADS_EXPLICIT=1; shift 2 ;;
+        --self-catalog-blast-task)
+            SELF_CATALOG_BLAST_TASK="$2"; shift 2 ;;
+        --self-catalog-blast-mask-cds-before-search)
+            SELF_CATALOG_BLAST_MASK_CDS="1"; shift ;;
+        --self-catalog-sqlite-stream)
+            SELF_CATALOG_SQLITE_STREAM="1"; shift ;;
+        --self-catalog-enforce-query-order)
+            SELF_CATALOG_ENFORCE_QUERY_ORDER="1"; shift ;;
+        --self-catalog-query-order-tolerance-aa)
+            SELF_CATALOG_QUERY_ORDER_TOLERANCE_AA="$2"; shift 2 ;;
+        --self-catalog-chain-mode)
+            SELF_CATALOG_CHAIN_MODE="$2"; shift 2 ;;
+        --self-catalog-dag-max-query-gap)
+            SELF_CATALOG_DAG_MAX_QUERY_GAP="$2"; shift 2 ;;
+        --self-catalog-blast-max-evalue)
+            SELF_CATALOG_BLAST_MAX_EVALUE="$2"
+            shift 2
+            ;;
+        --self-catalog-blast-min-bitscore)
+            SELF_CATALOG_BLAST_MIN_BITSCORE="$2"
+            shift 2
+            ;;
+        --self-catalog-blast-min-align-aa)
+            SELF_CATALOG_BLAST_MIN_ALIGN_AA="$2"
+            shift 2
+            ;;
+        --self-catalog-blast-cluster-gap)
+            SELF_CATALOG_BLAST_CLUSTER_GAP="$2"
+            shift 2
+            ;;
+        --self-catalog-overlap-filter-basis)
+            SELF_CATALOG_OVERLAP_FILTER_BASIS="$2"; shift 2 ;;
+        --self-catalog-score-mode)
+            SELF_CATALOG_SCORE_MODE="$2"; shift 2 ;;
+        --self-catalog-blast-min-cluster-score)
+            SELF_CATALOG_BLAST_MIN_CLUSTER_SCORE="$2"
+            shift 2
+            ;;
+        --self-catalog-blast-merge-loci)
+            SELF_CATALOG_BLAST_MERGE_LOCI="1"
+            shift
+            ;;
+        --self-catalog-blast-merge-gap)
+            SELF_CATALOG_BLAST_MERGE_GAP="$2"
+            shift 2
+            ;;
+        --self-catalog-blast-merge-same-strand)
+            SELF_CATALOG_BLAST_MERGE_SAME_STRAND="1"
+            shift
+            ;;
+        --self-catalog-blast-merge-coordinate-mode)
+            SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE="$2"
+            shift 2
+            ;;
+        --self-catalog-mmseqs-sensitivity)
+            SELF_CATALOG_MMSEQS_SENSITIVITY="$2"
+            shift 2
+            ;;
+        --self-catalog-mmseqs-max-seqs)
+            SELF_CATALOG_MMSEQS_MAX_SEQS="$2"
+            shift 2
+            ;;
+        --self-catalog-mmseqs-evalue)
+            SELF_CATALOG_MMSEQS_EVALUE="$2"
+            shift 2
+            ;;
+        --self-catalog-mmseqs-translation-mode)
+            SELF_CATALOG_MMSEQS_TRANSLATION_MODE="$2"
+            shift 2
+            ;;
+        --self-catalog-mmseqs-keep-longest)
+            SELF_CATALOG_MMSEQS_KEEP_LONGEST="1"
+            shift
+            ;;
+        --self-catalog-mmseqs-mask-cds-before-search)
+            SELF_CATALOG_MMSEQS_MASK_CDS="1"
+            shift
+            ;;
+        --self-catalog-mmseqs-reuse-m8)
+            SELF_CATALOG_MMSEQS_REUSE_M8="$2"
+            shift 2
+            ;;
+        --self-catalog-validate-disruptions)
+            SELF_CATALOG_VALIDATE_DISRUPTIONS="1"
+            shift
+            ;;
+        --self-catalog-validation-flank)
+            SELF_CATALOG_VALIDATION_FLANK="$2"
+            shift 2
+            ;;
+        --self-catalog-source-overlap-cutoff)
+            SELF_CATALOG_SOURCE_OVERLAP_CUTOFF="$2"
+            shift 2
+            ;;
+        --self-catalog-max-candidates-per-query)
+            SELF_CATALOG_MAX_CANDIDATES_PER_QUERY="$2"
+            shift 2
+            ;;
+        --self-catalog-max-merged-span)
+            SELF_CATALOG_MAX_MERGED_SPAN="$2"
             shift 2
             ;;
         --genome)
@@ -66,6 +494,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --threads)
             THREADS="$2"
+            CLI_THREADS="$2"
             shift 2
             ;;
         --species)
@@ -84,10 +513,22 @@ while [[ $# -gt 0 ]]; do
             WISEPATH="$2"
             shift 2
             ;;
-        --whitelist)
-            REF_WHITELIST="$2"
-            shift 2
-            ;;
+        --unitary-candidates)
+            UNITARY_CANDIDATES="$2"; shift 2 ;;
+        --target-proteins)
+            UNITARY_TARGET_PROTEINS="$2"; shift 2 ;;
+        --target-genome)
+            UNITARY_TARGET_GENOME="$2"; shift 2 ;;
+        --unitary-reuse-target-genome-paf)
+            UNITARY_REUSE_TARGET_GENOME_PAF="$2"; shift 2 ;;
+        --outgroup-proteins)
+            UNITARY_OUTGROUP_PROTEINS="$2"; shift 2 ;;
+        --unitary-synteny-bed)
+            UNITARY_SYNTENY_BED="$2"; shift 2 ;;
+        --unitary-reuse-target-m8)
+            UNITARY_REUSE_TARGET_M8="$2"; shift 2 ;;
+        --unitary-reuse-outgroup-m8)
+            UNITARY_REUSE_OUTGROUP_M8="$2"; shift 2 ;;
         --config)
             CONFIG_FILE="$2"
             shift 2
@@ -104,10 +545,13 @@ while [[ $# -gt 0 ]]; do
             GENERATE_VISUALIZATION=1
             shift
             ;;
+        --version)
+            printf 'EasyPseudogene '; cat "${EASYPSEUDOGENE_DIR}/VERSION"; exit 0 ;;
         --help|-h)
             usage
             exit 0
             ;;
+        --help-advanced) advanced_usage; exit 0 ;;
         *)
             echo "ERROR: Unknown option: $1" >&2
             usage
@@ -116,29 +560,133 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+[[ "${INVALID_PROTEINS}" =~ ^(skip|error)$ ]] || { echo "ERROR: --invalid-proteins must be skip or error" >&2; exit 1; }
+[[ "${SELF_CATALOG_ENGINE}" =~ ^(legacy|fast|blast-fast|mmseqs-fast)$ ]] || { echo "ERROR: unknown self search engine" >&2; exit 1; }
+case "${WORKFLOW_CLI}" in
+    "") ;;
+    standard)
+        [[ "${FAST_CATALOG}" == "0" && -z "${PRESET}" ]] || { echo "ERROR: --workflow standard conflicts with fast options/presets" >&2; exit 1; }
+        ;;
+    fast)
+        [[ "${MODE}" == "self" ]] || { echo "ERROR: --workflow fast requires --mode self" >&2; exit 1; }
+        if [[ -z "${PRESET}" && "${FAST_CATALOG}" == "0" && "${ENGINE_EXPLICIT}" == "0" ]]; then
+            PRESET="mmseqs-${SENSITIVITY_CLI:-balanced}"
+        fi
+        FAST_CATALOG=1
+        SELF_CATALOG_VALIDATE_DISRUPTIONS=1
+        ;;
+    *) echo "ERROR: --workflow must be standard or fast" >&2; exit 1 ;;
+esac
+if [[ -n "${SENSITIVITY_CLI}" ]]; then
+    [[ "${SENSITIVITY_CLI}" =~ ^(balanced|sensitive)$ && "${WORKFLOW_CLI}" == "fast" && "${PRESET}" == "mmseqs-${SENSITIVITY_CLI}" ]] || { echo "ERROR: --sensitivity requires --workflow fast with the matching MMseqs preset" >&2; exit 1; }
+fi
+if [[ -z "${THREADS}" ]]; then
+    THREADS=$(python3 - <<'PYTHREADS'
+import os
+available = len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else (os.cpu_count() or 1)
+limits = [available, 16]
+for key in ('SLURM_CPUS_PER_TASK', 'PBS_NP', 'NSLOTS'):
+    value = os.environ.get(key, '')
+    if value.isdigit() and int(value) > 0:
+        limits.append(int(value))
+print(max(1, min(limits)))
+PYTHREADS
+)
+fi
+
+# Historical --mode reference is an alias for the cross-species comparison.
+if [[ "${MODE}" == "reference" ]]; then
+    echo "NOTICE: --mode reference is a legacy alias for --mode cross" >&2
+    MODE="cross"
+fi
+
+# Preserve old unitary commands; new commands use easypseudogene-unitary.
+if [[ "${MODE}" == "unitary" ]]; then
+    if [[ "${EASYPSEUDOGENE_UNITARY_WRAPPER:-0}" != "1" ]]; then
+        echo "NOTICE: --mode unitary is a legacy interface; use easypseudogene-unitary for optional evidence annotation" >&2
+    fi
+    [[ -n "${PROTEINS}" && -f "${PROTEINS}" ]] || { echo "ERROR: --proteins reference FASTA is required for --mode unitary" >&2; exit 1; }
+    [[ -n "${UNITARY_TARGET_PROTEINS}" && -f "${UNITARY_TARGET_PROTEINS}" ]] || { echo "ERROR: --target-proteins is required for --mode unitary" >&2; exit 1; }
+    [[ -n "${UNITARY_CANDIDATES}" && -f "${UNITARY_CANDIDATES}" ]] || { echo "ERROR: --unitary-candidates validated TSV is required" >&2; exit 1; }
+    [[ -n "${THREADS}" ]] || { echo "ERROR: --threads is required" >&2; exit 1; }
+    [[ -z "${UNITARY_OUTGROUP_PROTEINS}" || -f "${UNITARY_OUTGROUP_PROTEINS}" ]] || { echo "ERROR: outgroup proteins not found" >&2; exit 1; }
+    [[ -z "${UNITARY_SYNTENY_BED}" || -f "${UNITARY_SYNTENY_BED}" ]] || { echo "ERROR: unitary synteny BED not found" >&2; exit 1; }
+    OUTPUT_DIR="${OUTPUT_DIR:-unitary_output}"; SPECIES="${SPECIES:-unitary}"; unitary_dir="${OUTPUT_DIR}/${SPECIES}/unitary"; mkdir -p "${unitary_dir}"
+    unitary_cmd=(python3 "${LIB_DIR}/unitary_cross_species.py" --candidates "${UNITARY_CANDIDATES}" --reference-proteins "${PROTEINS}" --target-proteins "${UNITARY_TARGET_PROTEINS}" --workdir "${unitary_dir}/work" --threads "${THREADS}" --out-tsv "${unitary_dir}/${SPECIES}.unitary_evidence.tsv" --summary-json "${unitary_dir}/summary.json")
+    [[ -z "${UNITARY_TARGET_GENOME}" || -f "${UNITARY_TARGET_GENOME}" ]] || { echo "ERROR: target genome not found" >&2; exit 1; }
+    [[ -z "${UNITARY_REUSE_TARGET_GENOME_PAF}" || -f "${UNITARY_REUSE_TARGET_GENOME_PAF}" ]] || { echo "ERROR: target genome PAF not found" >&2; exit 1; }
+    [[ -n "${UNITARY_TARGET_GENOME}" ]] && unitary_cmd+=(--target-genome "${UNITARY_TARGET_GENOME}")
+    [[ -n "${UNITARY_REUSE_TARGET_GENOME_PAF}" ]] && unitary_cmd+=(--reuse-target-genome-paf "${UNITARY_REUSE_TARGET_GENOME_PAF}")
+    [[ -n "${UNITARY_OUTGROUP_PROTEINS}" ]] && unitary_cmd+=(--outgroup-proteins "${UNITARY_OUTGROUP_PROTEINS}")
+    [[ -n "${UNITARY_SYNTENY_BED}" ]] && unitary_cmd+=(--synteny-bed "${UNITARY_SYNTENY_BED}")
+    [[ -n "${UNITARY_REUSE_TARGET_M8}" ]] && unitary_cmd+=(--reuse-proteome-m8 "${UNITARY_REUSE_TARGET_M8}")
+    [[ -n "${UNITARY_REUSE_OUTGROUP_M8}" ]] && unitary_cmd+=(--reuse-outgroup-m8 "${UNITARY_REUSE_OUTGROUP_M8}")
+    printf 'Unitary evidence command:'; printf ' %q' "${unitary_cmd[@]}"; echo
+    "${unitary_cmd[@]}"; exit 0
+fi
+
 # Check required arguments
-if [[ -z "${PROTEINS}" || -z "${GENOME}" || -z "${THREADS}" ]]; then
+if [[ ( -z "${PROTEINS}" && -z "${REFERENCE_GENOME}" ) || -z "${GENOME}" || -z "${THREADS}" ]]; then
     echo "ERROR: Missing required arguments" >&2
     usage
     exit 1
 fi
 
 # Check if files exist
-if [[ ! -f "${PROTEINS}" ]]; then
+if [[ -n "${PROTEINS}" && ! -f "${PROTEINS}" ]]; then
     echo "ERROR: Protein file not found: ${PROTEINS}" >&2
     exit 1
 fi
+[[ -z "${REFERENCE_GENOME}" || -f "${REFERENCE_GENOME}" ]] || { echo "ERROR: reference genome not found" >&2; exit 1; }
+[[ -z "${REFERENCE_GENOME}" || -z "${PROTEINS}" ]] || { echo "ERROR: use either --proteins or --reference-genome" >&2; exit 1; }
+[[ -z "${REFERENCE_GENOME}" || -n "${REFERENCE_GTF}" ]] || { echo "ERROR: --reference-genome requires --reference-annotation (GTF/GFF3)" >&2; exit 1; }
 
 if [[ ! -f "${GENOME}" ]]; then
     echo "ERROR: Genome file not found: ${GENOME}" >&2
     exit 1
 fi
+[[ -z "${REFERENCE_ANNOTATION_TSV_CLI}" || -f "${REFERENCE_ANNOTATION_TSV_CLI}" ]] || { echo "ERROR: reference annotation TSV not found" >&2; exit 1; }
+[[ -z "${REFERENCE_GTF}" || -f "${REFERENCE_GTF}" ]] || { echo "ERROR: reference annotation not found" >&2; exit 1; }
+[[ -z "${PROTEIN_ID_MAP}" || -f "${PROTEIN_ID_MAP}" ]] || { echo "ERROR: protein ID map not found" >&2; exit 1; }
+[[ -z "${REFERENCE_GTF}" || -z "${REFERENCE_ANNOTATION_TSV_CLI}" ]] || { echo "ERROR: use either --reference-annotation or --reference-annotations TSV" >&2; exit 1; }
+[[ -z "${REDUNDANCY_PAF}" || -f "${REDUNDANCY_PAF}" ]] || { echo "ERROR: redundancy PAF not found" >&2; exit 1; }
+[[ -z "${SYNTENY_TSV_CLI}" || -f "${SYNTENY_TSV_CLI}" ]] || { echo "ERROR: synteny TSV not found" >&2; exit 1; }
+
+if [[ "${MODE}" != "cross" && "${MODE}" != "self" ]]; then
+    echo "ERROR: --mode must be cross or self (got: ${MODE})" >&2
+    exit 1
+fi
+if [[ "${MODE}" == "self" && -n "${REFERENCE_GTF}" ]]; then
+    echo "ERROR: --reference-annotation/--reference-gtf is for --mode cross; self mode uses --gff" >&2
+    exit 1
+fi
+if [[ "${MODE}" == "self" && -n "${REFERENCE_GENOME}" ]]; then
+    echo "ERROR: --reference-genome is for --mode cross" >&2
+    exit 1
+fi
+
+if [[ -n "${REPEAT_BED}" && ! -f "${REPEAT_BED}" ]]; then
+    echo "ERROR: repeat BED file not found: ${REPEAT_BED}" >&2
+    exit 1
+fi
+
+if [[ "${MODE}" == "self" ]]; then
+    if [[ -z "${GFF}" ]]; then
+        echo "ERROR: --gff is required for --mode self" >&2
+        exit 1
+    fi
+    if [[ ! -f "${GFF}" ]]; then
+        echo "ERROR: GFF file not found: ${GFF}" >&2
+        exit 1
+    fi
+fi
 
 # Auto-detect species name if not provided
 if [[ -z "${SPECIES}" ]]; then
-    SPECIES=$(basename "${GENOME}" .fa | sed 's/\.fa$//' | sed 's/\.fasta$//' | sed 's/_chr$//' | sed 's/_genome$//')
+    SPECIES=$(basename "${GENOME}" | sed -E 's/\.gz$//; s/\.(fa|fasta|fna|fas)$//; s/(_chr|_genome)$//')
     echo "Auto-detected species name: ${SPECIES}"
 fi
+[[ "${SPECIES}" != "." && "${SPECIES}" != ".." && "${SPECIES}" != */* && "${SPECIES}" != *$'\n'* && "${SPECIES}" != *$'\t'* ]] || { echo "ERROR: --species must be a single directory name" >&2; exit 1; }
 
 # Set output directory
 if [[ -z "${OUTPUT_DIR}" ]]; then
@@ -147,106 +695,496 @@ fi
 
 # Load configuration
 CONFIG_FILE="${CONFIG_FILE:-${CONFIG_DIR}/default.conf}"
-if [[ -f "${CONFIG_FILE}" ]]; then
-    source "${CONFIG_FILE}"
+[[ -f "${CONFIG_FILE}" ]] || { echo "ERROR: config file not found: ${CONFIG_FILE}" >&2; exit 1; }
+# Defaults then overrides; export settings to subprocesses.
+set -a
+source "${CONFIG_DIR}/default.conf"
+source "${CONFIG_FILE}"
+set +a
+[[ -z "${CLI_THREADS}" ]] || THREADS="${CLI_THREADS}"
+if [[ "${WORKFLOW_CLI}" == "fast" ]]; then FAST_CATALOG=1; SELF_CATALOG_VALIDATE_DISRUPTIONS=1; fi
+export CONFIG_FILE
+
+# Expand validated presets after loading the optional config so the selected
+# preset is explicit and reproducible.
+case "${PRESET}" in
+    "") ;;
+    mmseqs-balanced)
+        MODE="self"; FAST_CATALOG="1"; SELF_CATALOG_ENGINE="mmseqs-fast"
+        SELF_CATALOG_MMSEQS_SENSITIVITY="5.7"; SELF_CATALOG_MMSEQS_MAX_SEQS="1000"
+        SELF_CATALOG_MMSEQS_TRANSLATION_MODE="0"; SELF_CATALOG_MMSEQS_KEEP_LONGEST="1"
+        SELF_CATALOG_MMSEQS_MASK_CDS="1"; SELF_CATALOG_MAX_CDS_OVERLAP="0"
+        SELF_CATALOG_SOURCE_OVERLAP_CUTOFF="0.8"; SELF_CATALOG_BLAST_MERGE_LOCI="1"
+        SELF_CATALOG_BLAST_MERGE_GAP="2000"; SELF_CATALOG_BLAST_MERGE_SAME_STRAND="1"
+        SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE="union"; SELF_CATALOG_MAX_MERGED_SPAN="20000"
+        SELF_CATALOG_VALIDATE_DISRUPTIONS="1"
+        ;;
+    mmseqs-sensitive)
+        MODE="self"; FAST_CATALOG="1"; SELF_CATALOG_ENGINE="mmseqs-fast"
+        SELF_CATALOG_MMSEQS_SENSITIVITY="7.5"; SELF_CATALOG_MMSEQS_MAX_SEQS="2000"
+        SELF_CATALOG_MMSEQS_TRANSLATION_MODE="0"; SELF_CATALOG_MMSEQS_KEEP_LONGEST="1"
+        SELF_CATALOG_MMSEQS_MASK_CDS="1"; SELF_CATALOG_MAX_CDS_OVERLAP="0"
+        SELF_CATALOG_SOURCE_OVERLAP_CUTOFF="0.8"; SELF_CATALOG_BLAST_MERGE_LOCI="1"
+        SELF_CATALOG_BLAST_MERGE_GAP="2000"; SELF_CATALOG_BLAST_MERGE_SAME_STRAND="1"
+        SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE="union"; SELF_CATALOG_MAX_MERGED_SPAN="20000"
+        SELF_CATALOG_VALIDATE_DISRUPTIONS="1"
+        ;;
+    tblastn-production|tblastn-production-candidates-only|tblastn-production-validated)
+        MODE="self"; FAST_CATALOG="1"; SELF_CATALOG_ENGINE="blast-fast"
+        SELF_CATALOG_BLAST_PARALLEL_CHROMOSOMES="1"; SELF_CATALOG_SQLITE_STREAM="1"; SELF_CATALOG_BLAST_TASK="tblastn"; SELF_CATALOG_BLAST_MASK_CDS="1"
+        SELF_CATALOG_MAX_CDS_OVERLAP="0"; SELF_CATALOG_SOURCE_OVERLAP_CUTOFF="0.8"; SELF_CATALOG_BLAST_MERGE_LOCI="1"; SELF_CATALOG_BLAST_MERGE_GAP="2000"; SELF_CATALOG_BLAST_MERGE_SAME_STRAND="1"; SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE="union"; SELF_CATALOG_MAX_MERGED_SPAN="20000"
+        [[ "${PRESET}" == "tblastn-production-validated" ]] && SELF_CATALOG_VALIDATE_DISRUPTIONS="1"
+        ;;
+    *) echo "ERROR: Unknown --preset: ${PRESET}" >&2; exit 1 ;;
+esac
+if [[ "${MODE}" == "self" ]]; then
+    [[ -n "${GFF}" ]] || { echo "ERROR: --gff is required for self-catalog presets" >&2; exit 1; }
+    [[ -f "${GFF}" ]] || { echo "ERROR: GFF file not found: ${GFF}" >&2; exit 1; }
+    [[ -z "${REFERENCE_GENOME}" && -z "${REFERENCE_GTF}" ]] || { echo "ERROR: self mode uses --proteins and --gff, not reference-genome options" >&2; exit 1; }
 fi
+[[ "${MODE}" =~ ^(cross|self)$ ]] || { echo "ERROR: comparison mode must be cross or self" >&2; exit 1; }
+[[ "${SELF_CATALOG_ENGINE}" =~ ^(legacy|fast|blast-fast|mmseqs-fast)$ ]] || { echo "ERROR: unknown self search engine" >&2; exit 1; }
+if [[ "${WORKFLOW_CLI}" == "standard" && "${FAST_CATALOG}" != "0" ]]; then
+    echo "ERROR: selected config/preset conflicts with --workflow standard" >&2; exit 1
+fi
+if [[ "${WORKFLOW_CLI}" == "fast" && "${MODE}" != "self" ]]; then
+    echo "ERROR: selected config conflicts with --mode self --workflow fast" >&2; exit 1
+fi
+
+[[ "${BLAST_JOBS_EXPLICIT}" == "1" ]] && SELF_CATALOG_BLAST_JOBS="${CLI_BLAST_JOBS}"
+[[ "${BLAST_THREADS_EXPLICIT}" == "1" ]] && SELF_CATALOG_BLAST_THREADS_PER_JOB="${CLI_BLAST_THREADS}"
+# --threads is the total tblastn CPU budget; explicit resource options win presets.
+[[ "${THREADS}" =~ ^[1-9][0-9]*$ ]] || { echo "ERROR: --threads must be positive" >&2; exit 1; }
+if [[ "${SELF_CATALOG_ENGINE}" == "blast-fast" ]]; then
+    [[ "${SELF_CATALOG_BLAST_JOBS}" =~ ^[1-9][0-9]*$ && "${SELF_CATALOG_BLAST_THREADS_PER_JOB}" =~ ^[1-9][0-9]*$ ]] || { echo "ERROR: BLAST resources must be positive" >&2; exit 1; }
+    if (( BLAST_JOBS_EXPLICIT == 0 )); then
+        if (( BLAST_THREADS_EXPLICIT )); then SELF_CATALOG_BLAST_JOBS=$(( THREADS / SELF_CATALOG_BLAST_THREADS_PER_JOB ));
+        else SELF_CATALOG_BLAST_JOBS=$(( THREADS < 7 ? THREADS : 7 )); fi
+    fi
+    (( SELF_CATALOG_BLAST_JOBS > 0 )) || { echo "ERROR: BLAST resources exceed --threads" >&2; exit 1; }
+    if (( BLAST_THREADS_EXPLICIT == 0 )); then SELF_CATALOG_BLAST_THREADS_PER_JOB=$(( THREADS / SELF_CATALOG_BLAST_JOBS )); fi
+    (( SELF_CATALOG_BLAST_THREADS_PER_JOB > 0 && SELF_CATALOG_BLAST_JOBS * SELF_CATALOG_BLAST_THREADS_PER_JOB <= THREADS )) || { echo "ERROR: BLAST jobs * threads-per-job exceeds --threads" >&2; exit 1; }
+fi
+
+# Resolve GeneWise before staging large inputs; other workflows do not need it.
+if [[ "${CHECK_INPUTS}" != "1" && -z "${SKIP_GENEWISE:-}" && "${FAST_CATALOG}" != "1" ]]; then
+    source "${LIB_DIR}/genewise_env.sh"
+    epg_setup_genewise
+fi
+
+# Stage generic inputs before any alignment or catalog engine consumes them.
+# This lock also protects the pre-cache normalization/translation phase.
+RUN_DIR="${OUTPUT_DIR}/${SPECIES}"
+WORK_DIR="${RUN_DIR}/work"
+LOG_DIR="${RUN_DIR}/logs"
+export EPG_WORK_DIR="${WORK_DIR}" EPG_LOG_DIR="${LOG_DIR}"
+mkdir -p "${WORK_DIR}/inputs"
+exec 8>"${OUTPUT_DIR}/${SPECIES}/.input.lock"
+flock -n 8 || { echo "ERROR: output directory inputs are in use" >&2; exit 1; }
+input_directory="${RUN_DIR}"
+input_work_directory="${WORK_DIR}"
+if [[ "${CHECK_INPUTS}" == "1" ]]; then
+    input_directory="${WORK_DIR}/input_check"
+    input_work_directory="${input_directory}"
+fi
+normalize_cmd=(python3 "${LIB_DIR}/normalize_inputs.py" --mode "${MODE}" \
+    --directory "${input_directory}" --work-dir "${input_work_directory}" --genome "${GENOME}" --invalid-proteins "${INVALID_PROTEINS}")
+[[ -z "${PROTEINS}" ]] || normalize_cmd+=(--proteins "${PROTEINS}")
+[[ -z "${REFERENCE_GENOME}" ]] || normalize_cmd+=(--reference-genome "${REFERENCE_GENOME}")
+[[ -z "${REFERENCE_GTF}" ]] || normalize_cmd+=(--reference-annotation "${REFERENCE_GTF}")
+[[ -z "${GFF}" ]] || normalize_cmd+=(--target-annotation "${GFF}")
+[[ -z "${PROTEIN_ID_MAP}" ]] || normalize_cmd+=(--protein-id-map "${PROTEIN_ID_MAP}")
+"${normalize_cmd[@]}"
+input_manifest="${input_work_directory}/inputs/input_manifest.json"
+if [[ "${CHECK_INPUTS}" == "1" ]]; then
+    echo "Input check complete: ${input_work_directory}/inputs/input_qc.json"
+    echo "Protein exclusions: ${input_work_directory}/inputs/protein_exclusions.tsv"
+    echo "Run again without --check-inputs to start analysis."
+    exit 0
+fi
+command -v tee >/dev/null 2>&1 || { echo "ERROR: Missing dependency: tee" >&2; exit 1; }
+mkdir -p "${LOG_DIR}"
+exec > >(tee -a "${LOG_DIR}/run.log") 2>&1
+
+normalized_input_path() {
+    python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["normalized_paths"][sys.argv[2]])' "${input_manifest}" "$1"
+}
+PROTEINS="$(normalized_input_path proteins)"
+GENOME="$(normalized_input_path genome)"
+REFERENCE_GENOME="$(normalized_input_path reference_genome)"
+REFERENCE_GTF="$(normalized_input_path reference_annotation)"
+if [[ "${MODE}" == "self" ]]; then GFF="$(normalized_input_path target_annotation)"; fi
+publish_input_metadata() {
+    mkdir -p "${OUTPUT_DIR}/${SPECIES}/metadata" "${OUTPUT_DIR}/${SPECIES}/qc"
+    cp "${input_manifest}" "${OUTPUT_DIR}/${SPECIES}/metadata/input_manifest.json"
+    cp "${WORK_DIR}/inputs/protein_id_mapping.tsv" "${OUTPUT_DIR}/${SPECIES}/metadata/protein_id_mapping.tsv"
+    cp "${WORK_DIR}/inputs/input_qc.json" "${OUTPUT_DIR}/${SPECIES}/qc/input_qc.json"
+    cp "${WORK_DIR}/inputs/protein_exclusions.tsv" "${OUTPUT_DIR}/${SPECIES}/qc/protein_exclusions.tsv"
+}
 
 # Export paths
 export EASYPSEUDOGENE_DIR LIB_DIR
-export PROTEINS GENOME SPECIES OUTPUT_DIR THREADS
-export REF_WHITELIST="${REF_WHITELIST:-}"
+export PROTEINS GENOME SPECIES OUTPUT_DIR THREADS MODE GFF MASK_FEATURES SELF_OVERLAP_CUTOFF ANNOTATED_OVERLAP_CUTOFF SKIP_MMSEQS MINIPROT_MAX_HITS FAST_CATALOG REPEAT_BED
 
-# Set GeneWise paths if explicitly provided via --wisepath
-if [[ -n "${WISEPATH}" ]]; then
-    export PATH="${WISEPATH}:${PATH}"
-fi
-
-# Auto-detect WISECONFIGDIR if not already set (via env var or --wiseconfig)
-if [[ -z "${WISECONFIGDIR}" ]]; then
-    # Priority 1: look relative to the genewise binary (works for conda, brew, system installs)
-    if command -v genewise >/dev/null 2>&1; then
-        _gw_bin="$(command -v genewise)"
-        _gw_prefix="$(cd "$(dirname "${_gw_bin}")/.." && pwd)"
-        if [[ -d "${_gw_prefix}/share/wise2/wisecfg" ]]; then
-            WISECONFIGDIR="${_gw_prefix}/share/wise2/wisecfg"
-        fi
-    fi
-    # Priority 2: active conda environment
-    if [[ -z "${WISECONFIGDIR}" && -n "${CONDA_PREFIX:-}" ]]; then
-        if [[ -d "${CONDA_PREFIX}/share/wise2/wisecfg" ]]; then
-            WISECONFIGDIR="${CONDA_PREFIX}/share/wise2/wisecfg"
-        fi
-    fi
-    # Priority 3: common system-wide locations
-    if [[ -z "${WISECONFIGDIR}" ]]; then
-        for _candidate in /usr/share/wise2/wisecfg /usr/local/share/wise2/wisecfg; do
-            if [[ -d "${_candidate}" ]]; then
-                WISECONFIGDIR="${_candidate}"
-                break
-            fi
-        done
-    fi
-fi
-if [[ -n "${WISECONFIGDIR}" ]]; then
-    export WISECONFIGDIR
-fi
-
-# Check dependencies
+# Check only dependencies required by the selected execution plan.
 echo "Checking dependencies..."
-for cmd in mmseqs miniprot samtools python3 awk sort comm; do
-    if ! command -v "${cmd}" >/dev/null 2>&1; then
-        echo "ERROR: Missing dependency: ${cmd}" >&2
-        exit 1
-    fi
-done
-
-# Check GeneWise if not skipping
-if [[ -z "${SKIP_GENEWISE:-}" ]]; then
-    if ! command -v genewise >/dev/null 2>&1; then
-        echo "ERROR: GeneWise (genewise) not found in PATH." >&2
-        echo "  Install via conda:  conda install -c bioconda wise2" >&2
-        echo "  Or specify manually: --wisepath /path/to/wise2/bin" >&2
-        exit 1
-    fi
-    if [[ -z "${WISECONFIGDIR}" ]]; then
-        echo "ERROR: WISECONFIGDIR could not be detected automatically." >&2
-        echo "  Specify it with:  --wiseconfig /path/to/wisecfg" >&2
-        exit 1
-    fi
+require_cmd() {
+    command -v "$1" >/dev/null 2>&1 || { echo "ERROR: Missing dependency: $1" >&2; exit 1; }
+}
+require_cmd python3
+if [[ "${MODE}" == "self" && "${FAST_CATALOG}" == "1" && "${SELF_CATALOG_ENGINE}" == "mmseqs-fast" ]]; then
+    require_cmd mmseqs
+elif [[ "${MODE}" == "self" && "${FAST_CATALOG}" == "1" && "${SELF_CATALOG_ENGINE}" == "blast-fast" ]]; then
+    if [[ -z "${SELF_CATALOG_BLAST6}" ]]; then require_cmd makeblastdb; require_cmd tblastn; fi
+else
+    for cmd in miniprot samtools awk sort comm; do require_cmd "${cmd}"; done
+    [[ "${SKIP_MMSEQS}" == "1" ]] || require_cmd mmseqs
 fi
+if [[ "${FAST_CATALOG}" == "1" && "${SELF_CATALOG_VALIDATE_DISRUPTIONS}" == "1" ]]; then require_cmd miniprot; fi
+
 
 echo ""
 echo "=========================================="
 echo "EasyPseudogene - Pseudogene Identification"
 echo "=========================================="
+echo "Mode:          ${MODE}"
 echo "Proteins:      ${PROTEINS}"
 echo "Genome:        ${GENOME}"
 echo "Species:       ${SPECIES}"
 echo "Threads:       ${THREADS}"
+echo "Skip mmseqs:    ${SKIP_MMSEQS}"
+echo "Max hits/prot:  ${MINIPROT_MAX_HITS}"
+echo "miniprot --outn/--outs: ${MINIPROT_OUTN}/${MINIPROT_OUTS}"
+echo "Fast catalog:   ${FAST_CATALOG}"
+if [[ "${FAST_CATALOG}" == "1" && "${MODE}" == "self" ]]; then echo "Self catalog engine: ${SELF_CATALOG_ENGINE}"; fi
+if [[ -n "${REPEAT_BED}" ]]; then echo "Repeat BED:     ${REPEAT_BED}"; fi
 echo "Output:        ${OUTPUT_DIR}"
+if [[ "${MODE}" == "self" ]]; then
+    echo "GFF:           ${GFF}"
+    echo "Mask features: ${MASK_FEATURES}"
+    echo "Keep pseudogene annotations: ${KEEP_PSEUDOGENE_ANNOTATIONS}"
+fi
+echo "GeneWise:      ${GENEWISE_BIN:-<not required>}"
 echo "WISECONFIGDIR: ${WISECONFIGDIR:-<not set>}"
 echo "=========================================="
 echo ""
 
-# Create output directory structure
-mkdir -p "${OUTPUT_DIR}/${SPECIES}"/{mmseqs,miniprot,regions,genewise,post_genewise_filter,logs,tmp}
+# Each execution stage creates the work directories it actually needs.
+
+
+# Protect every workflow before writing QC, metadata or search results.
+cache_dir="${OUTPUT_DIR}/${SPECIES}"
+mkdir -p "${cache_dir}"
+exec 9>"${cache_dir}/.reference.lock"
+flock -n 9 || { echo "ERROR: output directory is in use" >&2; exit 1; }
+invocation_json=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "${ORIGINAL_ARGS[@]}")
+cache_cmd=(python3 "${LIB_DIR}/reference_cache.py" begin --directory "${cache_dir}" --source "${EASYPSEUDOGENE_DIR}" --input "${PROTEINS}" --input "${GENOME}" --input "${CONFIG_FILE}" --invocation "${invocation_json}")
+cache_cmd+=(--input "${input_manifest}")
+[[ -n "${GFF}" ]] && cache_cmd+=(--input "${GFF}")
+[[ -n "${REPEAT_BED}" ]] && cache_cmd+=(--input "${REPEAT_BED}")
+[[ -n "${REFERENCE_GTF}" ]] && cache_cmd+=(--input "${REFERENCE_GTF}")
+[[ -n "${REFERENCE_GENOME}" ]] && cache_cmd+=(--input "${REFERENCE_GENOME}")
+[[ -n "${PROTEIN_ID_MAP}" ]] && cache_cmd+=(--input "${PROTEIN_ID_MAP}")
+[[ -n "${REFERENCE_ANNOTATION_TSV_CLI}" ]] && cache_cmd+=(--input "${REFERENCE_ANNOTATION_TSV_CLI}")
+[[ -n "${REDUNDANCY_PAF}" ]] && cache_cmd+=(--input "${REDUNDANCY_PAF}")
+[[ -n "${SYNTENY_TSV_CLI}" ]] && cache_cmd+=(--input "${SYNTENY_TSV_CLI}")
+cache_action="$("${cache_cmd[@]}" --reuse-complete)"
+if [[ "${cache_action}" == "reused" ]]; then
+    echo "Verified complete run reused: ${cache_dir}"
+    echo "Report: ${cache_dir}/report.html"
+    echo "Results: ${cache_dir}/results/"
+    exit 0
+fi
+complete_reference_cache() {
+    local status=$?
+    trap - EXIT
+    if (( status == 0 )); then
+        python3 "${LIB_DIR}/reference_cache.py" complete --directory "${cache_dir}" || status=$?
+    fi
+    exit "${status}"
+}
+trap complete_reference_cache EXIT
+publish_input_metadata
+
+
+# Shared targeted disruption validation and evidence-tier export for fast engines.
+run_fast_catalog_validation() {
+    local fast_dir="$1"
+    local catalog_summary="${2:-}"
+    [[ "${SELF_CATALOG_VALIDATE_DISRUPTIONS}" == "1" ]] || return 0
+    local validation_dir="${WORK_DIR}/disruption_validation"
+    mkdir -p "${validation_dir}"
+    local -a validation_cmd=(python3 "${LIB_DIR}/validate_candidate_disruptions.py"
+        --candidates "${fast_dir}/${SPECIES}.fast_catalog_candidates.tsv"
+        --genome "${GENOME}" --proteins "${PROTEINS}"
+        --workdir "${validation_dir}/work" --threads "${THREADS}"
+        --flank "${SELF_CATALOG_VALIDATION_FLANK}"
+        --out-tsv "${fast_dir}/${SPECIES}.fast_catalog_candidates.validated.tsv"
+        --summary-json "${validation_dir}/summary.json")
+    [[ -n "${catalog_summary}" ]] && validation_cmd+=(--catalog-summary "${catalog_summary}")
+    [[ -z "${GFF}" ]] || validation_cmd+=(--gff "${GFF}")
+    [[ -n "${REPEAT_BED}" ]] && validation_cmd+=(--repeat-bed "${REPEAT_BED}")
+    [[ -n "${SELF_CATALOG_SYNTENY_BED}" ]] && validation_cmd+=(--synteny-bed "${SELF_CATALOG_SYNTENY_BED}")
+    printf 'Disruption-validation command:'; printf ' %q' "${validation_cmd[@]}"; echo
+    "${validation_cmd[@]}"
+    local -a tier_cmd=(python3 "${LIB_DIR}/catalog_tiers.py"
+        --validated-tsv "${fast_dir}/${SPECIES}.fast_catalog_candidates.validated.tsv"
+        --prefix "${fast_dir}/${SPECIES}.fast_catalog_candidates"
+        --summary-json "${validation_dir}/tier_summary.json")
+    printf 'Evidence-tier command:'; printf ' %q' "${tier_cmd[@]}"; echo
+    "${tier_cmd[@]}"
+}
+
+publish_fast_results() {
+    local catalog_dir="$1"
+    (set -o posix; set) | awk '/^(SELF_CATALOG_|THREADS=|MODE=|FAST_CATALOG=|PRESET=|INVALID_PROTEINS=)/' \
+        > "${OUTPUT_DIR}/${SPECIES}/metadata/effective_config.txt"
+    local invocation_json
+    invocation_json=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "${ORIGINAL_ARGS[@]}")
+    local -a publish_cmd=(python3 "${LIB_DIR}/publish_catalog_results.py"
+        --run-dir "${OUTPUT_DIR}/${SPECIES}" --species "${SPECIES}"
+        --mode "${MODE}" --engine "${SELF_CATALOG_ENGINE}" --proteins "${PROTEINS}"
+        --catalog "${catalog_dir}/${SPECIES}.fast_catalog_candidates.tsv"
+        --config "${CONFIG_FILE}" --invocation "${invocation_json}")
+    if [[ "${SELF_CATALOG_VALIDATE_DISRUPTIONS}" == "1" ]]; then
+        publish_cmd+=(--validated "${catalog_dir}/${SPECIES}.fast_catalog_candidates.validated.tsv")
+    fi
+    "${publish_cmd[@]}"
+    echo "Report: ${RUN_DIR}/report.html"
+    echo "Results: ${OUTPUT_DIR}/${SPECIES}/results/"
+    echo "QC: ${OUTPUT_DIR}/${SPECIES}/qc/"
+    echo "Run metadata: ${OUTPUT_DIR}/${SPECIES}/metadata/"
+}
+
+# Integrated MMseqs2 translated-search self-catalog fast engine.
+if [[ "${MODE}" == "self" && "${FAST_CATALOG}" == "1" && "${SELF_CATALOG_ENGINE}" == "mmseqs-fast" ]]; then
+    echo "[Self catalog MMseqs-fast engine] MMseqs2 translated search -> clustered TSV/GFF3 catalog..."
+    fast_dir="${WORK_DIR}/fast_catalog"
+    work_dir="${WORK_DIR}/mmseqs_fast"
+    mkdir -p "${fast_dir}" "${work_dir}"
+    mmseqs_cmd=(python3 "${LIB_DIR}/self_catalog_mmseqs_fast.py"
+        --proteins "${PROTEINS}" --genome "${GENOME}" --gff "${GFF}"
+        --workdir "${work_dir}" --threads "${THREADS}"
+        --mmseqs-sensitivity "${SELF_CATALOG_MMSEQS_SENSITIVITY}"
+        --mmseqs-max-seqs "${SELF_CATALOG_MMSEQS_MAX_SEQS}"
+        --mmseqs-evalue "${SELF_CATALOG_MMSEQS_EVALUE}"
+        --mmseqs-translation-mode "${SELF_CATALOG_MMSEQS_TRANSLATION_MODE}"
+        --max-evalue "${SELF_CATALOG_BLAST_MAX_EVALUE}"
+        --min-bitscore "${SELF_CATALOG_BLAST_MIN_BITSCORE}"
+        --min-align-aa "${SELF_CATALOG_BLAST_MIN_ALIGN_AA}"
+        --cluster-gap "${SELF_CATALOG_BLAST_CLUSTER_GAP}"
+        --min-cluster-score "${SELF_CATALOG_BLAST_MIN_CLUSTER_SCORE}" --score-mode "${SELF_CATALOG_SCORE_MODE}" --chain-mode "${SELF_CATALOG_CHAIN_MODE}" --dag-max-query-gap "${SELF_CATALOG_DAG_MAX_QUERY_GAP}" --overlap-filter-basis "${SELF_CATALOG_OVERLAP_FILTER_BASIS}"
+        --max-cds-overlap "${SELF_CATALOG_MAX_CDS_OVERLAP}"
+        --source-overlap-cutoff "${SELF_CATALOG_SOURCE_OVERLAP_CUTOFF}"
+        --max-candidates-per-query "${SELF_CATALOG_MAX_CANDIDATES_PER_QUERY}"
+        --merge-gap "${SELF_CATALOG_BLAST_MERGE_GAP}"
+        --merge-coordinate-mode "${SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE}"
+        --max-merged-span "${SELF_CATALOG_MAX_MERGED_SPAN}"
+        --out-tsv "${fast_dir}/${SPECIES}.fast_catalog_candidates.tsv"
+        --out-gff3 "${fast_dir}/${SPECIES}.fast_catalog_candidates.gff3"
+        --summary-json "${fast_dir}/${SPECIES}.fast_catalog_summary.json")
+    [[ "${SELF_CATALOG_MMSEQS_KEEP_LONGEST}" == "1" ]] && mmseqs_cmd+=(--keep-longest-isoform)
+    [[ "${SELF_CATALOG_SQLITE_STREAM}" == "1" ]] && mmseqs_cmd+=(--sqlite-stream)
+    [[ "${SELF_CATALOG_MMSEQS_MASK_CDS}" == "1" ]] && mmseqs_cmd+=(--mask-cds-before-search)
+    [[ -n "${SELF_CATALOG_MMSEQS_REUSE_M8}" ]] && mmseqs_cmd+=(--reuse-m8 "${SELF_CATALOG_MMSEQS_REUSE_M8}")
+    [[ "${SELF_CATALOG_BLAST_MERGE_LOCI}" == "1" ]] && mmseqs_cmd+=(--merge-loci)
+    [[ "${SELF_CATALOG_BLAST_MERGE_SAME_STRAND}" == "1" ]] && mmseqs_cmd+=(--merge-same-strand)
+    printf 'MMseqs-fast command:'; printf ' %q' "${mmseqs_cmd[@]}"; echo
+    "${mmseqs_cmd[@]}"
+    run_fast_catalog_validation "${fast_dir}" "${fast_dir}/${SPECIES}.fast_catalog_summary.json"
+    publish_fast_results "${fast_dir}"
+    echo "[2/3] Skipping GeneWise (--fast-catalog --self-catalog-engine mmseqs-fast)"
+    echo "[3/3] Skipping filtering (--fast-catalog --self-catalog-engine mmseqs-fast)"
+    echo ""
+    echo "=========================================="
+    echo "EasyPseudogene completed successfully!"
+    echo "=========================================="
+    exit 0
+fi
+
+# Integrated BLAST6/tblastn self-catalog fast engine.
+if [[ "${MODE}" == "self" && "${FAST_CATALOG}" == "1" && "${SELF_CATALOG_ENGINE}" == "blast-fast" ]]; then
+    echo "[Self catalog BLAST-fast engine] BLAST6/tblastn -> clustered TSV/GFF3 catalog..."
+    fast_dir="${WORK_DIR}/fast_catalog"
+    mkdir -p "${fast_dir}"
+    blast6_file="${SELF_CATALOG_BLAST6}"
+    if [[ -z "${blast6_file}" ]]; then
+        blast_dir="${WORK_DIR}/blast_fast"
+        mkdir -p "${blast_dir}"
+        blast6_file="${blast_dir}/${SPECIES}.tblastn6"
+        if [[ "${SELF_CATALOG_BLAST_PARALLEL_CHROMOSOMES}" == "1" || "${SELF_CATALOG_BLAST_MASK_CDS}" == "1" ]]; then
+            runner_jobs="${SELF_CATALOG_BLAST_JOBS}"
+            runner_threads="${SELF_CATALOG_BLAST_THREADS_PER_JOB}"
+            runner_label="Parallel"
+            if [[ "${SELF_CATALOG_BLAST_PARALLEL_CHROMOSOMES}" != "1" ]]; then
+                runner_jobs=1
+                runner_threads="${THREADS}"
+                runner_label="Serial masked"
+            fi
+            parallel_cmd=(python3 "${LIB_DIR}/run_tblastn_parallel.py" --proteins "${PROTEINS}" --genome "${GENOME}" --gff "${GFF}" --workdir "${blast_dir}/parallel" --out-blast6 "${blast6_file}" --summary-json "${blast_dir}/parallel_summary.json" --jobs "${runner_jobs}" --threads-per-job "${runner_threads}" --task "${SELF_CATALOG_BLAST_TASK}" --evalue "${SELF_CATALOG_BLAST_MAX_EVALUE}" --resume --retries 1)
+            [[ "${SELF_CATALOG_BLAST_MASK_CDS}" == "1" ]] && parallel_cmd+=(--mask-cds)
+            printf '%s tblastn command:' "${runner_label}"; printf ' %q' "${parallel_cmd[@]}"; echo
+            "${parallel_cmd[@]}"
+        else
+            db_prefix="${blast_dir}/${SPECIES}.genome.blastdb"
+            if [[ ! -f "${db_prefix}.nin" && ! -f "${db_prefix}.00.nin" ]]; then makeblastdb -in "${GENOME}" -dbtype nucl -out "${db_prefix}" >/dev/null; fi
+            if [[ ! -f "${blast6_file}" ]]; then tblastn -task "${SELF_CATALOG_BLAST_TASK}" -query "${PROTEINS}" -db "${db_prefix}" -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen" -evalue "${SELF_CATALOG_BLAST_MAX_EVALUE}" -num_threads "${THREADS}" -out "${blast6_file}"; fi
+        fi
+    fi
+    blast_cmd=(python3 "${LIB_DIR}/self_catalog_blast_fast.py"
+        --blast6 "${blast6_file}" --query-fasta "${PROTEINS}"
+        --max-evalue "${SELF_CATALOG_BLAST_MAX_EVALUE}"
+        --min-bitscore "${SELF_CATALOG_BLAST_MIN_BITSCORE}"
+        --min-align-aa "${SELF_CATALOG_BLAST_MIN_ALIGN_AA}"
+        --cluster-gap "${SELF_CATALOG_BLAST_CLUSTER_GAP}"
+        --min-cluster-score "${SELF_CATALOG_BLAST_MIN_CLUSTER_SCORE}" --score-mode "${SELF_CATALOG_SCORE_MODE}" --chain-mode "${SELF_CATALOG_CHAIN_MODE}" --dag-max-query-gap "${SELF_CATALOG_DAG_MAX_QUERY_GAP}" --overlap-filter-basis "${SELF_CATALOG_OVERLAP_FILTER_BASIS}"
+        --gff "${GFF}" --max-cds-overlap "${SELF_CATALOG_MAX_CDS_OVERLAP}"
+        --source-overlap-cutoff "${SELF_CATALOG_SOURCE_OVERLAP_CUTOFF}"
+        --max-candidates-per-query "${SELF_CATALOG_MAX_CANDIDATES_PER_QUERY}"
+        --merge-gap "${SELF_CATALOG_BLAST_MERGE_GAP}"
+        --merge-coordinate-mode "${SELF_CATALOG_BLAST_MERGE_COORDINATE_MODE}"
+        --max-merged-span "${SELF_CATALOG_MAX_MERGED_SPAN}"
+        --out-tsv "${fast_dir}/${SPECIES}.fast_catalog_candidates.tsv"
+        --out-gff3 "${fast_dir}/${SPECIES}.fast_catalog_candidates.gff3"
+        --summary-json "${fast_dir}/${SPECIES}.fast_catalog_summary.json")
+    [[ "${SELF_CATALOG_SQLITE_STREAM}" == "1" ]] && blast_cmd+=(--sqlite-stream)
+    [[ "${SELF_CATALOG_ENFORCE_QUERY_ORDER}" == "1" ]] && blast_cmd+=(--enforce-query-order --query-order-tolerance-aa "${SELF_CATALOG_QUERY_ORDER_TOLERANCE_AA}")
+    [[ "${SELF_CATALOG_BLAST_MERGE_LOCI}" == "1" ]] && blast_cmd+=(--merge-loci)
+    [[ "${SELF_CATALOG_BLAST_MERGE_SAME_STRAND}" == "1" ]] && blast_cmd+=(--merge-same-strand)
+    printf 'BLAST-fast command:'; printf ' %q' "${blast_cmd[@]}"; echo
+    "${blast_cmd[@]}"
+    run_fast_catalog_validation "${fast_dir}"
+    publish_fast_results "${fast_dir}"
+    echo "[2/3] Skipping GeneWise (--fast-catalog --self-catalog-engine blast-fast)"
+    echo "[3/3] Skipping filtering (--fast-catalog --self-catalog-engine blast-fast)"
+    echo ""
+    echo "=========================================="
+    echo "EasyPseudogene completed successfully!"
+    echo "=========================================="
+    exit 0
+fi
+
+
+if [[ "${MODE}" == "cross" && -n "${REFERENCE_GTF}" ]]; then
+    REFERENCE_ANNOTATION_TSV_CLI="${OUTPUT_DIR}/${SPECIES}/metadata/reference_annotations.tsv"
+    mkdir -p "${OUTPUT_DIR}/${SPECIES}/metadata"
+    python3 "${LIB_DIR}/build_reference_annotation.py" \
+        --proteins "${PROTEINS}" --annotation "${REFERENCE_GTF}" \
+        --output "${REFERENCE_ANNOTATION_TSV_CLI}"
+fi
 
 # Step 1: Pre-GeneWise screening (mmseqs2 + miniprot)
-if [[ ! -f "${OUTPUT_DIR}/${SPECIES}/miniprot/${SPECIES}.paf" ]]; then
+if [[ ! -f "${WORK_DIR}/miniprot/${SPECIES}.paf" ]]; then
     echo "[1/3] Running pre-GeneWise screening (mmseqs2 + miniprot)..."
     bash "${EASYPSEUDOGENE_DIR}/scripts/run_screening.sh" \
         --proteins "${PROTEINS}" \
         --genome "${GENOME}" \
         --species "${SPECIES}" \
         --output "${OUTPUT_DIR}" \
-        --threads "${THREADS}"
+        --threads "${THREADS}" \
+        --max-hits-per-protein "${MINIPROT_MAX_HITS}" \
+        --miniprot-outn "${MINIPROT_OUTN}" \
+        --miniprot-outs "${MINIPROT_OUTS}" \
+        $( [[ "${SKIP_MMSEQS}" == "1" ]] && echo "--skip-mmseqs" ) \
+        $( [[ "${FAST_CATALOG}" == "1" ]] && echo "--skip-region-extract" )
 else
     echo "[1/3] Pre-GeneWise screening already done, skipping..."
 fi
 
+# Integrated self-catalog fast engine: skip the legacy self-filter + classifier pipeline.
+if [[ "${MODE}" == "self" && "${FAST_CATALOG}" == "1" && "${SELF_CATALOG_ENGINE}" == "fast" ]]; then
+    echo "[Self catalog fast engine] Integrated PAF -> scored TSV/GFF3 catalog..."
+    fast_dir="${WORK_DIR}/fast_catalog"
+    mkdir -p "${fast_dir}"
+    selfcat_cmd=(python3 "${LIB_DIR}/self_catalog_fast.py"
+        --paf "${WORK_DIR}/miniprot/${SPECIES}.paf"
+        --gff "${GFF}"
+        --max-hits-per-protein "${MINIPROT_MAX_HITS}"
+        --score-cutoff "${SELF_CATALOG_SCORE_CUTOFF}"
+        --max-cds-overlap "${SELF_CATALOG_MAX_CDS_OVERLAP}"
+        --out-tsv "${fast_dir}/${SPECIES}.fast_catalog_candidates.tsv"
+        --out-gff3 "${fast_dir}/${SPECIES}.fast_catalog_candidates.gff3"
+        --summary-json "${fast_dir}/${SPECIES}.fast_catalog_summary.json")
+    if [[ "${SELF_CATALOG_REQUIRE_EVIDENCE}" == "1" ]]; then selfcat_cmd+=(--require-evidence); fi
+    if [[ -n "${REPEAT_BED}" ]]; then selfcat_cmd+=(--repeat-bed "${REPEAT_BED}"); fi
+    if [[ "${SELF_CATALOG_CLUSTER_LOCI}" == "1" ]]; then selfcat_cmd+=(--cluster-loci --cluster-max-gap "${SELF_CATALOG_CLUSTER_MAX_GAP}" --cluster-coordinate-mode "${SELF_CATALOG_CLUSTER_COORDINATE_MODE}"); fi
+    "${selfcat_cmd[@]}"
+    run_fast_catalog_validation "${fast_dir}" "${fast_dir}/${SPECIES}.fast_catalog_summary.json"
+    publish_fast_results "${fast_dir}"
+    SKIP_GENEWISE=1
+    SKIP_FILTER=1
+    echo "[2/3] Skipping GeneWise (--fast-catalog --self-catalog-engine fast)"
+    echo "[3/3] Skipping filtering (--fast-catalog --self-catalog-engine fast)"
+    echo ""
+    echo "=========================================="
+    echo "EasyPseudogene completed successfully!"
+    echo "=========================================="
+    exit 0
+fi
+
+
+# Self mode: remove annotated/self loci from broad miniprot candidates before GeneWise.
+if [[ "${MODE}" == "self" ]]; then
+    self_report="${WORK_DIR}/miniprot/${SPECIES}.self_mode_filter_report.tsv"
+    if [[ ! -f "${self_report}" ]]; then
+        echo "[Self mode] Filtering annotated/self loci from broad candidates..."
+        python3 "${LIB_DIR}/filter_self_mode_candidates.py"             --best-hits "${WORK_DIR}/miniprot/${SPECIES}.best_hits.tsv"             --best-hits-flanked "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.tsv"             --gff "${GFF}"             --out-best-hits "${WORK_DIR}/miniprot/${SPECIES}.best_hits.self_filtered.tsv"             --out-best-hits-flanked "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.self_filtered.tsv"             --report "${self_report}"             --bed "${WORK_DIR}/miniprot/${SPECIES}.broad_self_candidates.bed"             --gff3-out "${WORK_DIR}/miniprot/${SPECIES}.broad_self_candidates.gff3"             --removed "${WORK_DIR}/miniprot/${SPECIES}.self_mode_removed.tsv"             --mask-features "${MASK_FEATURES}"             --self-overlap-cutoff "${SELF_OVERLAP_CUTOFF}" \
+            --pseudogene-overlap-cutoff "${PSEUDOGENE_OVERLAP_CUTOFF}" \
+            $( [[ "${KEEP_PSEUDOGENE_ANNOTATIONS}" == "1" ]] && echo "--keep-pseudogene-annotations" )             --annotated-overlap-cutoff "${ANNOTATED_OVERLAP_CUTOFF}"
+        cp -f "${WORK_DIR}/miniprot/${SPECIES}.best_hits.tsv"               "${WORK_DIR}/miniprot/${SPECIES}.best_hits.before_self_filter.tsv"
+        cp -f "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.tsv"               "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.before_self_filter.tsv"
+        cp -f "${WORK_DIR}/miniprot/${SPECIES}.best_hits.self_filtered.tsv"               "${WORK_DIR}/miniprot/${SPECIES}.best_hits.tsv"
+        cp -f "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.self_filtered.tsv"               "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.tsv"
+        echo "  Broad self candidates: ${WORK_DIR}/miniprot/${SPECIES}.broad_self_candidates.bed"
+        echo "  Broad self GFF3: ${WORK_DIR}/miniprot/${SPECIES}.broad_self_candidates.gff3"
+    else
+        echo "[Self mode] Self-mode filtering already done, skipping..."
+    fi
+    if [[ "${FAST_CATALOG}" != "1" && ! -s "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.tsv" ]]; then
+        echo "[Self mode] No off-annotation broad candidates remain after masking; creating empty GeneWise output."
+        # Publish a valid zero-locus run through the same provenance schema.
+        mkdir -p "${WORK_DIR}/regions" "${WORK_DIR}/genewise"
+        python3 "${LIB_DIR}/prepare_genewise_jobs.py" \
+            --proteins "${PROTEINS}" \
+            --hits "${WORK_DIR}/miniprot/${SPECIES}.best_hits.tsv" \
+            --flanked "${WORK_DIR}/miniprot/${SPECIES}.best_hits.flanked.tsv" \
+            --regions "${WORK_DIR}/regions" \
+            --jobs "${WORK_DIR}/genewise/${SPECIES}.jobs.tsv" \
+            --paf "${WORK_DIR}/miniprot/${SPECIES}.paf"
+        : > "${WORK_DIR}/genewise/pseudogene-genewise.txt"
+        SKIP_GENEWISE=1
+    fi
+fi
+
+# Fast catalog: classify current broad candidates without GeneWise. This is the
+# P-GRe-like speed path; strict GeneWise validation remains available by default.
+if [[ "${FAST_CATALOG}" == "1" ]]; then
+    echo "[Fast catalog] Classifying miniprot candidates without GeneWise..."
+    fast_dir="${WORK_DIR}/fast_catalog"
+    mkdir -p "${fast_dir}"
+    fast_cmd=(python3 "${LIB_DIR}/classify_fast_catalog_candidates.py"
+        --best-hits "${WORK_DIR}/miniprot/${SPECIES}.best_hits.tsv"
+        --genome "${GENOME}"
+        --out-tsv "${fast_dir}/${SPECIES}.fast_catalog_candidates.tsv"
+        --out-gff3 "${fast_dir}/${SPECIES}.fast_catalog_candidates.gff3")
+    if [[ -n "${GFF}" ]]; then
+        fast_cmd+=(--gff "${GFF}")
+    fi
+    if [[ -n "${REPEAT_BED}" ]]; then
+        fast_cmd+=(--repeat-bed "${REPEAT_BED}")
+    fi
+    "${fast_cmd[@]}"
+    run_fast_catalog_validation "${fast_dir}"
+    publish_fast_results "${fast_dir}"
+    SKIP_GENEWISE=1
+    SKIP_FILTER=1
+    echo "EasyPseudogene completed successfully!"
+    exit 0
+fi
+
 # Step 2: GeneWise
 if [[ -z "${SKIP_GENEWISE:-}" ]]; then
-    if [[ ! -f "${OUTPUT_DIR}/${SPECIES}/genewise/pseudogene-genewise.txt" ]]; then
+    if [[ ! -f "${WORK_DIR}/genewise/pseudogene-genewise.txt" ]]; then
         echo "[2/3] Running GeneWise..."
         bash "${EASYPSEUDOGENE_DIR}/scripts/run_genewise.sh" \
             --proteins "${PROTEINS}" \
@@ -263,14 +1201,73 @@ fi
 
 # Step 3: Post-GeneWise filtering
 if [[ -z "${SKIP_FILTER:-}" ]]; then
+    if [[ "${MODE}" == "cross" && "${ENABLE_REDUNDANCY_FILTER:-1}" == "1" && -z "${REDUNDANCY_PAF}" ]]; then
+        REDUNDANCY_PAF="${WORK_DIR}/miniprot/${SPECIES}.candidate_copies.paf"
+        COPY_SEARCH_SOURCE="automatic_candidate_scan"
+        echo "[Cross] Searching additional genome copies for disrupted candidates..."
+        python3 "${LIB_DIR}/run_candidate_copy_scan.py" \
+            --proteins "${PROTEINS}" --genome "${GENOME}" \
+            --genewise "${WORK_DIR}/genewise/pseudogene-genewise.txt" \
+            --locus-map "${WORK_DIR}/regions/locus_map.tsv" \
+            --output-paf "${REDUNDANCY_PAF}" --threads "${THREADS}"
+    fi
     echo "[3/3] Running post-GeneWise filtering..."
-    bash "${EASYPSEUDOGENE_DIR}/scripts/run_filtering.sh" \
+    filter_cmd=(bash "${EASYPSEUDOGENE_DIR}/scripts/run_filtering.sh" \
         --proteins "${PROTEINS}" \
+        --mode "${MODE}" \
         --species "${SPECIES}" \
         --output "${OUTPUT_DIR}" \
-        --whitelist "${REF_WHITELIST:-}"
+        --config "${CONFIG_FILE}")
+    [[ -z "${REFERENCE_ANNOTATION_TSV_CLI}" ]] || filter_cmd+=(--reference-annotations "${REFERENCE_ANNOTATION_TSV_CLI}")
+    [[ -z "${REDUNDANCY_PAF}" ]] || filter_cmd+=(--redundancy-paf "${REDUNDANCY_PAF}")
+    [[ -z "${COPY_SEARCH_SOURCE}" ]] || filter_cmd+=(--copy-search-source "${COPY_SEARCH_SOURCE}")
+    [[ -z "${SYNTENY_TSV_CLI}" ]] || filter_cmd+=(--synteny-tsv "${SYNTENY_TSV_CLI}")
+    "${filter_cmd[@]}"
+    if [[ "${MODE}" == "cross" && -n "${REFERENCE_GTF}" ]]; then
+        echo "[Cross] Assessing reference gene neighborhood in target genome..."
+        python3 "${LIB_DIR}/assess_neighborhood_synteny.py" \
+            --reference-gtf "${REFERENCE_GTF}" \
+            --reference-annotations "${REFERENCE_ANNOTATION_TSV_CLI}" \
+            --best-hits "${WORK_DIR}/miniprot/${SPECIES}.best_hits.tsv" \
+            --locus-map "${WORK_DIR}/regions/locus_map.tsv" \
+            --candidate-ids "${WORK_DIR}/post_genewise_filter/putative_pseudogene_ids.txt" \
+            --out-tsv "${WORK_DIR}/post_genewise_filter/neighborhood_synteny.tsv"
+        printf 'protein_neighborhood_synteny\tassessed_proxy\t%s\n' \
+            "${WORK_DIR}/post_genewise_filter/neighborhood_synteny.tsv" \
+            >> "${WORK_DIR}/post_genewise_filter/evidence_status.tsv"
+    fi
 else
     echo "[3/3] Skipping filtering (--skip-filter)"
+fi
+
+# Generate visualization if requested
+if [[ -n "${GENERATE_VISUALIZATION:-}" ]]; then
+    echo "[Visualization] Generating HTML report..."
+    genewise_file="${WORK_DIR}/genewise/pseudogene-genewise.txt"
+    visualization_file="${RUN_DIR}/results/genewise_alignment.html"
+    mkdir -p "${RUN_DIR}/results"
+    
+    if [[ -s "${genewise_file}" ]]; then
+        python3 "${LIB_DIR}/visualize_genewise.py" \
+            --genewise "${genewise_file}" \
+            --output "${visualization_file}"
+        echo "  Visualization saved to: ${visualization_file}"
+    else
+        echo "  WARNING: GeneWise output not found or empty, skipping visualization" >&2
+    fi
+    echo ""
+fi
+
+if [[ -f "${WORK_DIR}/post_genewise_filter/high_confidence_pseudogene_ids.txt" ]]; then
+    echo "[Results] Publishing per-locus results, QC and metadata..."
+    python3 "${LIB_DIR}/publish_genewise_results.py" \
+        --run-dir "${OUTPUT_DIR}/${SPECIES}" \
+        --proteins "${PROTEINS}" \
+        --species "${SPECIES}" \
+        --comparison-mode "${MODE}"
+elif [[ -z "${SKIP_FILTER:-}" ]]; then
+    echo "ERROR: filtering finished without a final candidate list" >&2
+    exit 1
 fi
 
 echo ""
@@ -279,23 +1276,10 @@ echo "EasyPseudogene completed successfully!"
 echo "=========================================="
 echo ""
 echo "Results:"
-echo "  High-confidence pseudogenes: ${OUTPUT_DIR}/${SPECIES}/post_genewise_filter/high_confidence_pseudogene_ids.txt"
-echo "  All putative pseudogenes: ${OUTPUT_DIR}/${SPECIES}/post_genewise_filter/putative_pseudogene_ids.txt"
+echo "  Summary report: ${RUN_DIR}/report.html"
+echo "  Organized results: ${OUTPUT_DIR}/${SPECIES}/results/"
+echo "  Stage counts and exclusions: ${OUTPUT_DIR}/${SPECIES}/qc/"
+echo "  Effective parameters: ${OUTPUT_DIR}/${SPECIES}/metadata/"
+echo "  Final candidates: ${OUTPUT_DIR}/${SPECIES}/results/final_loci.tsv"
+echo "  All selected loci: ${OUTPUT_DIR}/${SPECIES}/results/loci.tsv"
 echo ""
-
-# Generate visualization if requested
-if [[ -n "${GENERATE_VISUALIZATION:-}" ]]; then
-    echo "[Visualization] Generating HTML report..."
-    genewise_file="${OUTPUT_DIR}/${SPECIES}/genewise/pseudogene-genewise.txt"
-    visualization_file="${OUTPUT_DIR}/${SPECIES}/genewise_visualization.html"
-    
-    if [[ -f "${genewise_file}" ]]; then
-        python3 "${LIB_DIR}/visualize_genewise.py" \
-            --genewise "${genewise_file}" \
-            --output "${visualization_file}"
-        echo "  Visualization saved to: ${visualization_file}"
-    else
-        echo "  WARNING: GeneWise output not found, skipping visualization" >&2
-    fi
-    echo ""
-fi

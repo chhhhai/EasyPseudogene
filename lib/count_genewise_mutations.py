@@ -6,6 +6,7 @@ Usage: python3 count_genewise_mutations.py pseudogene-genewise.txt > mutation_co
 import argparse
 import re
 import sys
+from genewise_alignment import mutation_counts
 
 
 def main():
@@ -31,17 +32,8 @@ def main():
         
         transcript_id = id_match.group(1)
         
-        # Count frameshifts (!)
-        shift_count = len(re.findall(r'!', block))
-        
-        # Count stop codons (* and :X[)
-        stop_count = len(re.findall(r'\*', block))
-        stopx_count = len(re.findall(r':X\[', block))
-        
-        # If no * but has :X[, use :X[ count
-        if stop_count == 0 and stopx_count > 0:
-            stop_count = stopx_count
-        
+        stop_count, shift_count = mutation_counts(block)
+
         print(f"{transcript_id}\t{stop_count}\t{shift_count}")
 
 

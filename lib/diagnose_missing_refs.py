@@ -203,7 +203,7 @@ def main():
         print(f"  Miniprot hits: {', '.join([f'{sp}={miniprot[sp]}' for sp in args.species])}")
         
         # GeneWise disruptions
-        print(f"  GeneWise disruptions:")
+        print("  GeneWise disruptions:")
         for sp in args.species:
             gw = genewise_results[sp].get(tid, {})
             stop = gw.get('stop', False)
