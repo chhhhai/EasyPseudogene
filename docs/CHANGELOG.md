@@ -10,8 +10,10 @@
   raw text. Protect source inputs and symlink targets; refuse mounted work.
 - Record deletion scope and status, refresh artifact fingerprints and prevent
   accidental restaging or in-place continuation of cleaned output archives.
-- This revision has source/shell syntax review only. No cleanup command,
-  regression suite or biological analysis has been executed for this change.
+- Validate cleanup with 117 regression tests (13 cleanup-specific) and 18
+  runtime checks on new synthetic standard Cross/Self and Self MMseqs-fast
+  outputs. Verify preservation, refusal cases and permission-failure retry;
+  see docs/VALIDATION.md for scope and limits.
 
 ## 1.1.1-dev — 2026-10-13 (unreleased)
 

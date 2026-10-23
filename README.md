@@ -322,6 +322,9 @@ Cleanup reduces storage **after completion**; it does not reduce peak disk
 usage while the analysis is running. Logical byte counts are not a guarantee
 of physically reclaimed disk space, for example when hard links are present.
 
+Cleanup has been checked with fresh synthetic analyses, 18 runtime checks and
+13 dedicated regression tests. See [validation scope](docs/VALIDATION.md#optional-cleanup-revision).
+
 ## Workflow and interpretation
 
 The standard workflow follows this order:

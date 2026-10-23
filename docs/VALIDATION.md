@@ -126,8 +126,47 @@ itself does not establish additional validation.
 
 ## Optional cleanup revision
 
-**1.2.0** adds optional post-publication intermediate cleanup and a
-standalone dry-run/cleanup helper. Only source and shell syntax were reviewed
-for this revision. No cleanup operation or new regression/analysis run was
-performed; previous validation records do not establish runtime verification
-of this deletion feature. Existing scientific result directories were retained.
+**1.2.0** adds optional post-publication cleanup and a standalone cleanup helper.
+On **2026-10-23**, the released runtime code passed **117 regression tests**,
+including **13 cleanup-specific tests**, and **18 runtime checks** using new
+synthetic analysis outputs and isolated copies of those outputs.
+
+The runtime checks included:
+
+- A fresh Cross/Self installation demo without cleanup: Cross retained one
+  final candidate and Self retained zero; intermediate files remained present.
+- Successful automatic cleanup for standard Cross, standard Self and Self
+  MMseqs-fast workflows, plus standalone cleanup for completed Cross/Self runs.
+- A dry-run that changed no file contents or directory entries; repeated cleanup
+  was idempotent. Adding the cleanup flag to an otherwise identical complete
+  run reused that analysis and then cleaned it.
+- Unchanged report, result-table, QC and log fingerprints after standalone
+  cleanup; retained report links remained valid. Cross TSV/BED/GFF3 outputs
+  matched the uncleaned run, and embedded overview records remained available.
+- Preservation of the final Cross GeneWise text with one verified stop and one
+  frameshift. Zero-final-candidate and miniprot-only workflows did not require
+  a GeneWise archive.
+- Refusal of locked/incomplete runs, modified published outputs, missing final
+  GeneWise records, source inputs under work/, work-directory symlinks,
+  snapshots and unsupported legacy layouts. Symlink targets, original inputs
+  and unrecognized work entries were retained.
+- A real filesystem permission failure during deletion: cleanup recorded
+  `partial`, kept the published outputs, refreshed fingerprints and completed
+  successfully after permissions were restored and the command was retried.
+- An intentionally failed search command: automatic cleanup did not run, the
+  analysis cache remained `running`, and intermediates remained available.
+- Refusal to restage or rerun analysis inside a cleaned directory; original
+  bundled input hashes remained unchanged. The mount-point guard was exercised
+  separately through a mocked unit check, without mounting any filesystem.
+
+The five main cleanup outputs had zero remaining work files. No runtime code
+change was needed. Two initial test-harness assumptions were corrected before
+all 18 runtime checks passed: fast workflows use miniprot rather than GeneWise,
+and GeneWise discovery prepends its executable directory to PATH.
+
+These are small synthetic installation and cleanup checks, using two analysis
+threads. They do not establish cleanup performance on a 253 GB intermediate
+directory, peak disk usage on large genomes, or biological precision/recall.
+Existing scientific analyses and four-node production jobs were not cleaned,
+stopped or restarted. Detailed logs and file-fingerprint records are retained
+outside the source distribution in the local validation audit.
