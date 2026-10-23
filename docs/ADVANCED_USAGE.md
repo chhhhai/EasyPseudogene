@@ -2,7 +2,7 @@
 
 The two comparison modes remain Cross and Self. This document covers optional
 execution choices and evidence annotation for the development interface in
-1.1.1-dev. Run `easypseudogene --help-advanced` for the complete option list.
+1.2.0. Run `easypseudogene --help-advanced` for the complete option list.
 
 ## Configuration
 
@@ -125,3 +125,28 @@ provenance. Use a new output directory after upgrading.
 
 See [methods](METHODS.md) for filter rules and [validation](VALIDATION.md) for
 the actual scope of recorded checks.
+
+## Work-file retention
+
+`--cleanup-intermediates` is independent of the comparison mode and workflow.
+It runs only after successful publication and cache completion, while the CLI
+still holds the input and reference run locks. Input-only checks and failed
+analyses do not trigger cleanup. Retention is excluded from the analysis
+argument signature, so an otherwise identical uncleaned complete run can be
+verified and cleaned by adding this flag with the same software version.
+
+The standalone `easypseudogene-cleanup` helper supports previously completed
+current-layout runs without requiring the original analysis software version,
+alignment executables or source genomes. It verifies published artifacts,
+retains final GeneWise raw text, records retention in the run manifest, and
+refreshes artifact fingerprints after deletion. Existing completed analysis
+signatures remain in `metadata/reference_cache.json`; removal is intentional
+and is recorded separately from analysis completion. Cleaned runs cannot be
+reused for another analysis in place.
+
+Deletion is limited to known directories under `work/`; unrecognized files and
+folders, original source inputs, published outputs and logs are retained.
+Legacy layouts and directory mounts are refused. Dry-run reports logical byte
+counts and does not create or modify output files, including lock-file content.
+For cleanup failure, analysis completion and partial cleanup are recorded
+separately; review the error before retrying standalone cleanup.

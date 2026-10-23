@@ -172,6 +172,8 @@ def normalize_proteins(source, destination, model, id_map, report, invalid_polic
 
 def prepare(args):
     directory = args.directory.resolve()
+    if (directory / 'metadata/cleanup.json').exists():
+        raise ValueError('This run has cleaned intermediates; use a new output directory for input preparation or analysis')
     work = Path(getattr(args, 'work_dir', None) or directory).resolve()
     inputs = work / "inputs"
     if work != directory and (directory / 'inputs').exists():

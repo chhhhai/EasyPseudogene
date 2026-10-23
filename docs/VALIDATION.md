@@ -123,3 +123,11 @@ Cross/Self execution results above apply to **3.0.13-dev**. The later report
 revisions were rendered from those existing checked results, with syntax
 checks, without a new regression suite or biological analysis. Publication
 itself does not establish additional validation.
+
+## Optional cleanup revision
+
+**1.2.0** adds optional post-publication intermediate cleanup and a
+standalone dry-run/cleanup helper. Only source and shell syntax were reviewed
+for this revision. No cleanup operation or new regression/analysis run was
+performed; previous validation records do not establish runtime verification
+of this deletion feature. Existing scientific result directories were retained.

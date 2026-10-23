@@ -7,7 +7,7 @@ premature stops and frameshifts, and reports candidates together with their
 sequence evidence and filtering decisions. The standard workflow uses
 miniprot and GeneWise.
 
-> Version: **1.1.1-dev** (development). Use this documentation with the matching
+> Version: **1.2.0**. Use this documentation with the matching
 > source checkout; earlier versions have different commands and output layouts.
 
 ## Contents
@@ -19,8 +19,8 @@ miniprot and GeneWise.
 - [Example: human proteins against a dolphin genome](#example-human-proteins-against-a-dolphin-genome)
 - [Input requirements](#input-requirements)
 - [Outputs](#outputs)
+- [Intermediate-file cleanup](#intermediate-file-cleanup)
 - [Workflow and interpretation](#workflow-and-interpretation)
-- [Validation](#validation)
 - [Documentation](#documentation)
 - [Citation, license and support](#citation-license-and-support)
 
@@ -272,6 +272,55 @@ Use a fresh output directory after changing code, inputs or parameters.
 A verified complete run can be reused without rewriting its published results;
 incomplete, modified or incompatible runs are refused. Zero candidates is a
 valid completed result.
+
+## Intermediate-file cleanup
+
+Intermediate files are retained by default. Add `--cleanup-intermediates` to
+Cross or Self runs to remove generated work files **after successful analysis
+and publication**:
+
+```bash
+easypseudogene --mode cross \
+  --proteins reference.proteins.fa --genome target.genome.fa \
+  --threads 16 --species sample --output result \
+  --cleanup-intermediates
+```
+
+The report, all published result tables, QC, metadata and logs are retained.
+For standard runs with final candidates, their original GeneWise output is
+preserved in `results/final_genewise.txt`. Report charts and expandable
+alignments are already embedded in `report.html` and remain usable offline.
+
+For an existing completed run, preview cleanup first, then run it:
+
+```bash
+easypseudogene-cleanup --run-dir result/sample --dry-run
+easypseudogene-cleanup --run-dir result/sample
+```
+
+The helper validates the completed run and published-file fingerprints and
+acquires both run locks. It refuses active/incomplete runs, modified outputs,
+snapshots, unsupported legacy layouts, and work directories containing source
+inputs. `--dry-run` writes and deletes nothing. No analysis tools or original
+sequence inputs are needed for standalone cleanup.
+
+Cleanup removes known generated stage directories under `work/`, including
+staged input copies, search databases, extracted regions, temporary files and
+per-locus GeneWise files. Original inputs outside the run are retained, as are
+unrecognized entries under `work/`. A minimal `work/` directory remains. Paths,
+logical byte counts and cleanup status are recorded in `metadata/cleanup.json`.
+Symlinks within selected work directories are unlinked without deleting their
+targets; mounted directories are refused.
+
+A cleaned directory is a final-output archive: intermediate-stage continuation
+and same-directory analysis reuse are unavailable. Use a new output directory
+for another analysis. If cleanup is interrupted or reports `partial`, inspect
+`metadata/cleanup.json` and repeat the standalone command after resolving the
+reported problem. Completed output integrity is verified again before deletion.
+
+Cleanup reduces storage **after completion**; it does not reduce peak disk
+usage while the analysis is running. Logical byte counts are not a guarantee
+of physically reclaimed disk space, for example when hard links are present.
 
 ## Workflow and interpretation
 

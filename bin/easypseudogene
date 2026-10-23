@@ -47,6 +47,7 @@ PRESET=""
 WORKFLOW_CLI=""
 SENSITIVITY_CLI=""
 CHECK_INPUTS=0
+CLEANUP_REQUESTED=0
 INVALID_PROTEINS="skip"
 SELF_CATALOG_SCORE_CUTOFF="0"
 SELF_CATALOG_REQUIRE_EVIDENCE="0"
@@ -127,6 +128,8 @@ Run options:
   --output DIR                 Output directory [./easypseudogene_output]
   --species NAME               Run name [derived from target filename]
   --check-inputs               Prepare/check inputs only; do not search
+  --cleanup-intermediates      Remove work files after successful publication
+                              [default: retain]; keep report/results/QC/logs
   --invalid-proteins skip|error Exclude invalid sequences with report [skip],
                               or stop on the first invalid sequence
   --protein-id-map FILE        Optional explicit protein/transcript/gene TSV
@@ -159,6 +162,7 @@ Optional:
   --workflow standard|fast  Simple workflow selector (fast: self MMseqs balanced)
   --sensitivity balanced|sensitive  Search profile for --workflow fast [balanced]
   --check-inputs         Only prepare/check inputs
+  --cleanup-intermediates  Delete intermediates after a complete successful run
   --invalid-proteins skip|error  Report exclusions [skip] or reject bad sequences
   --mode MODE           Comparison mode: cross (default) or self
   --gff FILE            Target GTF/GFF3, plain/gzip (required for --mode self)
@@ -260,7 +264,7 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --help|-h|--help-advanced|--version|--check-inputs|--fast-catalog|--skip-mmseqs|--diagnostic-mmseqs|--keep-pseudogene-annotations|--self-catalog-require-evidence|--self-catalog-cluster-loci|--self-catalog-blast-parallel-chromosomes|--self-catalog-blast-mask-cds-before-search|--self-catalog-enforce-query-order|--self-catalog-sqlite-stream|--self-catalog-blast-merge-loci|--self-catalog-blast-merge-same-strand|--self-catalog-mmseqs-keep-longest|--self-catalog-mmseqs-mask-cds-before-search|--self-catalog-validate-disruptions|--skip-genewise|--skip-filter|--visualize) ;;
+        --help|-h|--help-advanced|--version|--check-inputs|--cleanup-intermediates|--fast-catalog|--skip-mmseqs|--diagnostic-mmseqs|--keep-pseudogene-annotations|--self-catalog-require-evidence|--self-catalog-cluster-loci|--self-catalog-blast-parallel-chromosomes|--self-catalog-blast-mask-cds-before-search|--self-catalog-enforce-query-order|--self-catalog-sqlite-stream|--self-catalog-blast-merge-loci|--self-catalog-blast-merge-same-strand|--self-catalog-mmseqs-keep-longest|--self-catalog-mmseqs-mask-cds-before-search|--self-catalog-validate-disruptions|--skip-genewise|--skip-filter|--visualize) ;;
         --*) [[ $# -ge 2 && "$2" != --* ]] || { echo "ERROR: $1 requires a value; use --help" >&2; exit 1; } ;;
     esac
     case $1 in
@@ -288,6 +292,7 @@ while [[ $# -gt 0 ]]; do
         --workflow) WORKFLOW_CLI="$2"; shift 2 ;;
         --sensitivity) SENSITIVITY_CLI="$2"; shift 2 ;;
         --check-inputs) CHECK_INPUTS=1; shift ;;
+        --cleanup-intermediates) CLEANUP_REQUESTED=1; shift ;;
         --invalid-proteins) INVALID_PROTEINS="$2"; shift 2 ;;
         --gff|--target-annotation)
             GFF="$2"
@@ -766,6 +771,12 @@ if [[ "${SELF_CATALOG_ENGINE}" == "blast-fast" ]]; then
     (( SELF_CATALOG_BLAST_THREADS_PER_JOB > 0 && SELF_CATALOG_BLAST_JOBS * SELF_CATALOG_BLAST_THREADS_PER_JOB <= THREADS )) || { echo "ERROR: BLAST jobs * threads-per-job exceeds --threads" >&2; exit 1; }
 fi
 
+# Cleaned runs are final-output archives. Never recreate their staged genomes.
+if [[ -e "${OUTPUT_DIR}/${SPECIES}/metadata/cleanup.json" ]]; then
+    echo "ERROR: this run has cleaned intermediates or interrupted cleanup. Results remain available; use a new --output directory for another analysis." >&2
+    exit 1
+fi
+
 # Resolve GeneWise before staging large inputs; other workflows do not need it.
 if [[ "${CHECK_INPUTS}" != "1" && -z "${SKIP_GENEWISE:-}" && "${FAST_CATALOG}" != "1" ]]; then
     source "${LIB_DIR}/genewise_env.sh"
@@ -889,10 +900,17 @@ cache_cmd+=(--input "${input_manifest}")
 [[ -n "${REDUNDANCY_PAF}" ]] && cache_cmd+=(--input "${REDUNDANCY_PAF}")
 [[ -n "${SYNTENY_TSV_CLI}" ]] && cache_cmd+=(--input "${SYNTENY_TSV_CLI}")
 cache_action="$("${cache_cmd[@]}" --reuse-complete)"
+cleanup_completed_run() {
+    if [[ "${CLEANUP_REQUESTED}" == "1" ]]; then
+        echo "[Storage] Cleaning intermediates after successful publication..."
+        python3 "${LIB_DIR}/cleanup_intermediates.py" --run-dir "${cache_dir}" --lock-fds 8 9
+    fi
+}
 if [[ "${cache_action}" == "reused" ]]; then
     echo "Verified complete run reused: ${cache_dir}"
     echo "Report: ${cache_dir}/report.html"
     echo "Results: ${cache_dir}/results/"
+    cleanup_completed_run
     exit 0
 fi
 complete_reference_cache() {
@@ -900,6 +918,7 @@ complete_reference_cache() {
     trap - EXIT
     if (( status == 0 )); then
         python3 "${LIB_DIR}/reference_cache.py" complete --directory "${cache_dir}" || status=$?
+        if (( status == 0 )); then cleanup_completed_run || status=$?; fi
     fi
     exit "${status}"
 }

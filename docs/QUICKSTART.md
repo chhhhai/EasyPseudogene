@@ -10,7 +10,7 @@ bash examples/demo/run_demo.sh
 It runs both comparison modes with two threads and prints `DEMO PASS` after
 checking the expected results. See [Demo details](../examples/demo/README.md).
 
-These commands describe the development interface in 1.1.1-dev. Use the
+These commands describe the interface in 1.2.0. Use the
 matching source checkout and a fresh output directory. See [installation](INSTALL.md)
 if the executable or its dependencies are not available.
 
@@ -68,3 +68,20 @@ separate from selection and are not biological confidence probabilities.
 
 Use `--help` for common options. Optional search engines and follow-up evidence
 annotation are documented in [advanced usage](ADVANCED_USAGE.md).
+
+## Optional cleanup after success
+
+Add `--cleanup-intermediates` to either analysis command to remove generated
+work files after successful publication. Default runs retain intermediates.
+The final report, result tables, QC, metadata and logs remain available.
+
+For an existing completed current-layout run:
+
+```bash
+easypseudogene-cleanup --run-dir OUTPUT/NAME --dry-run
+easypseudogene-cleanup --run-dir OUTPUT/NAME
+```
+
+Cleaned runs retain `metadata/cleanup.json` and, when applicable,
+`results/final_genewise.txt`. Use a new output directory for another analysis.
+See [cleanup details](../README.md#intermediate-file-cleanup).

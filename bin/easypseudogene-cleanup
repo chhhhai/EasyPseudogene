@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+epg_bin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec python3 "${epg_bin_dir}/../lib/cleanup_intermediates.py" "$@"

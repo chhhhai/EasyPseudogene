@@ -39,12 +39,16 @@ def artifacts(directory):
 
 
 def begin(a):
+    if (a.directory / 'metadata/cleanup.json').exists():
+        raise ValueError('Intermediates were cleaned or cleanup was interrupted. Published results remain available; use a new output directory for another analysis')
     inputs={str(p.resolve()):sha(p) for p in a.input if p.is_file()}
     source={str(p.relative_to(a.source)):sha(p) for sub in ['bin','scripts','lib','config'] for p in sorted((a.source/sub).rglob('*')) if p.is_file() and p.suffix not in ['.pyc'] and '__pycache__' not in p.parts}
     version_file=a.source/'VERSION'
     if version_file.is_file():source['VERSION']=sha(version_file)
     tools={name:sha(shutil.which(name)) if shutil.which(name) else None for name in ['python3','miniprot','genewise','samtools','mmseqs','gffread','tblastn','makeblastdb']}
-    signature={'inputs':inputs,'source':source,'tools':tools,'arguments':a.arguments,'environment':{k:os.environ.get(k,'') for k in ['WISECONFIGDIR','WISEPATH','GENEWISE_BIN','FLANK','MIN_ALN_LEN','MIN_MAPQ','MMSEQS_SEARCH_TYPE','MMSEQS_SENS','MMSEQS_EVALUE','MMSEQS_MAX_SEQS']}}
+    # Retention changes do not change the biological analysis/cache identity.
+    analysis_arguments=[arg for arg in a.arguments if arg != '--cleanup-intermediates']
+    signature={'inputs':inputs,'source':source,'tools':tools,'arguments':analysis_arguments,'environment':{k:os.environ.get(k,'') for k in ['WISECONFIGDIR','WISEPATH','GENEWISE_BIN','FLANK','MIN_ALN_LEN','MIN_MAPQ','MMSEQS_SEARCH_TYPE','MMSEQS_SENS','MMSEQS_EVALUE','MMSEQS_MAX_SEQS']}}
     wise=Path(os.environ.get('WISECONFIGDIR','/nonexistent'))
     if wise.is_dir():signature['wise_config']={p.name:sha(p) for p in sorted(wise.iterdir()) if p.is_file()}
     path=cache_file(a.directory)

@@ -1,7 +1,7 @@
 # Installation
 
 Use the source version matching the documentation. These instructions describe
-the development interface in 1.1.1-dev; earlier versions use different commands
+the interface in 1.2.0; earlier versions use different commands
 and output layouts.
 
 ## Platform and core dependencies

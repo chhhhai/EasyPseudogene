@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 — 2026-10-23
+
+- Add opt-in `--cleanup-intermediates` to clean known work directories only
+  after successful publication and cache completion in every workflow.
+- Add `easypseudogene-cleanup --run-dir DIR [--dry-run]` for completed runs.
+  Check run locks and published fingerprints before removing intermediates.
+- Preserve reports, results, QC, metadata, logs and final-candidate GeneWise
+  raw text. Protect source inputs and symlink targets; refuse mounted work.
+- Record deletion scope and status, refresh artifact fingerprints and prevent
+  accidental restaging or in-place continuation of cleaned output archives.
+- This revision has source/shell syntax review only. No cleanup command,
+  regression suite or biological analysis has been executed for this change.
+
 ## 1.1.1-dev — 2026-10-13 (unreleased)
 
 - Merge English statistics, final-candidate alignments, QC and downloads into
